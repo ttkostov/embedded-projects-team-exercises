@@ -24,6 +24,8 @@ public:
   void analogWriteValue(int value);
 
 private:
+  bool initialized_ = false;
+
   uint8_t id_;
   uint8_t mode_ = INPUT;
   uint8_t initialValue_ = LOW;

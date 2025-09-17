@@ -3,7 +3,7 @@
 #include <LiquidCrystal.h>
 #include "hardware/pin.h"
 
-class LCDDisplay
+class LCDDisplay : public LiquidCrystal
 {
 public:
   LCDDisplay(Pin &registerSelect, Pin &enable,
@@ -12,7 +12,7 @@ public:
 
   void begin();
 
-  LiquidCrystal &lcd(); // access raw Arduino LCD if needed
+  // custom extensions
 
   void printLine(uint8_t row, const String &text, bool clearRest = true);
   void updateRegion(uint8_t row, uint8_t col, const String &text);
@@ -26,10 +26,10 @@ public:
   void printProgress(uint8_t row, int percent);
 
 private:
-  LiquidCrystal lcd_;
+  bool initialized_ = false;
+
   uint8_t cols_;
   uint8_t rows_;
-
   String lineBuffer_[4]; // store last contents per row
 };
 

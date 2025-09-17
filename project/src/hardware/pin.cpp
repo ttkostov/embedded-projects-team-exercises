@@ -5,6 +5,9 @@ Pin::Pin(uint8_t pinId)
 
 Pin &Pin::begin()
 {
+  if (initialized_)
+    return *this;
+
   // configure mode
   pinMode(id_, mode_);
 
@@ -15,6 +18,8 @@ Pin &Pin::begin()
   }
 
   interruptDispatcher_.begin();
+
+  initialized_ = true;
   return *this;
 }
 

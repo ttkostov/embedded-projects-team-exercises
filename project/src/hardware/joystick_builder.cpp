@@ -1,12 +1,7 @@
-#include <Arduino.h>
 #include "hardware/joystick.h"
 
-JoystickBuilder::JoystickBuilder(PinBuilder &xPinBuilder,
-                                 PinBuilder &yPinBuilder,
-                                 PinBuilder &buttonPinBuilder)
-    : xPin_(xPinBuilder.asInput().build()),
-      yPin_(yPinBuilder.asInput().build()),
-      buttonPin_(buttonPinBuilder.asInputPullup().build()) {}
+JoystickBuilder::JoystickBuilder(PinBuilder &xPin, PinBuilder &yPin, PinBuilder &buttonPin)
+    : xPinBuilder_(xPin), yPinBuilder_(yPin), buttonPinBuilder_(buttonPin) {}
 
 JoystickBuilder &JoystickBuilder::setPressDebounce(int debounceDelayMs)
 {
@@ -14,17 +9,26 @@ JoystickBuilder &JoystickBuilder::setPressDebounce(int debounceDelayMs)
   return *this;
 }
 
-JoystickBuilder &JoystickBuilder::onPress(void (*handlerFn)())
+JoystickBuilder &JoystickBuilder::onPress(Callback cb)
 {
-  handlerFn_ = handlerFn;
+  pressHandlers_.push_back(cb);
   return *this;
 }
 
 Joystick &JoystickBuilder::build()
 {
-  static Joystick js(xPin_, yPin_, buttonPin_);
-  js.debounceDelayMs_ = debounceDelayMs_;
-  js.pressHandlerFn_ = handlerFn_;
-  js.begin();
-  return js;
+
+  Joystick *js = new Joystick(
+      xPinBuilder_,
+      yPinBuilder_,
+      buttonPinBuilder_
+          .withDebounce(debounceDelayMs_));
+
+  // Attach all pre-configured handlers
+  for (auto &cb : pressHandlers_)
+  {
+    js->onPress(cb);
+  }
+
+  return *js;
 }

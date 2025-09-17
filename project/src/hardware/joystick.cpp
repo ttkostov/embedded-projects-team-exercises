@@ -1,15 +1,23 @@
 #include <Arduino.h>
 #include "hardware/joystick.h"
 
-Joystick::Joystick(Pin &xPin, Pin &yPin, Pin &buttonPin)
-    : xPin_(xPin), yPin_(yPin), buttonPin_(buttonPin) {}
+Joystick::Joystick(PinBuilder &xPinBuilder, PinBuilder &yPinBuilder, PinBuilder &buttonPinBuilder)
+    : xPin_(xPinBuilder.asInput().build()),
+      yPin_(yPinBuilder.asInput().build()),
+      buttonPin_(buttonPinBuilder.asInputPullup().build())
+{
+}
 
 Joystick &Joystick::begin()
 {
-  buttonPin_.interruptDispatcher().onFalling(
-      makeCallback(this, &Joystick::handleButtonInterrupt));
-  buttonPin_.interruptDispatcher().setDebounce(debounceDelayMs_);
-  buttonPin_.interruptDispatcher().begin(FALLING);
+  if (initialized_)
+    return *this;
+
+  xPin_.begin();
+  yPin_.begin();
+  buttonPin_.begin();
+
+  initialized_ = true;
   return *this;
 }
 
@@ -25,20 +33,12 @@ int Joystick::readY()
 
 bool Joystick::isButtonPressed()
 {
-  return buttonPin_.isLow(); // pullup active, LOW = pressed
+  return buttonPin_.isLow(); // pull-up active, LOW = pressed
 }
 
-void Joystick::handleButtonInterrupt()
+void Joystick::onPress(Callback cb)
 {
-  unsigned long now = millis();
-  if (now - lastPressTime_ < (unsigned long)debounceDelayMs_)
-  {
-    return;
-  }
-  lastPressTime_ = now;
-
-  if (pressHandlerFn_)
-  {
-    pressHandlerFn_();
-  }
+  Serial.println(buttonPin_.interruptDispatcher().hasHandlers());
+  buttonPin_.interruptDispatcher().onChange(cb);
+  Serial.println(buttonPin_.interruptDispatcher().hasHandlers());
 }

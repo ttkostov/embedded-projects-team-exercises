@@ -1,11 +1,12 @@
 #pragma once
 #include <Arduino.h>
 #include "pin.h"
+#include "control/interrupt_dispatcher.h"
 
 class Joystick
 {
 public:
-  Joystick(Pin &xPin, Pin &yPin, Pin &buttonPin);
+  Joystick(PinBuilder &xPinBuilder, PinBuilder &yPinBuilder, PinBuilder &buttonPinBuilder);
 
   Joystick &begin();
 
@@ -13,18 +14,14 @@ public:
   int readY();
   bool isButtonPressed();
 
+  void onPress(Callback cb);
+
 private:
+  bool initialized_ = false;
+
   Pin &xPin_;
   Pin &yPin_;
   Pin &buttonPin_;
-
-  void (*pressHandlerFn_)() = nullptr;
-  int debounceDelayMs_ = 50;
-  volatile unsigned long lastPressTime_ = 0;
-
-  void handleButtonInterrupt();
-
-  friend class JoystickBuilder;
 };
 
 class JoystickBuilder
@@ -33,14 +30,16 @@ public:
   JoystickBuilder(PinBuilder &xPin, PinBuilder &yPin, PinBuilder &buttonPin);
 
   JoystickBuilder &setPressDebounce(int debounceDelayMs);
-  JoystickBuilder &onPress(void (*handlerFn)());
+  JoystickBuilder &onPress(Callback cb);
 
   Joystick &build();
 
 private:
-  Pin &xPin_;
-  Pin &yPin_;
-  Pin &buttonPin_;
-  int debounceDelayMs_ = 50;
-  void (*handlerFn_)() = nullptr;
+  PinBuilder &xPinBuilder_;
+  PinBuilder &yPinBuilder_;
+  PinBuilder &buttonPinBuilder_;
+
+  int debounceDelayMs_ = 0;
+
+  std::vector<Callback> pressHandlers_;
 };

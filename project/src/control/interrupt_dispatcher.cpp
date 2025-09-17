@@ -32,10 +32,31 @@ InterruptDispatcher::InterruptDispatcher(uint8_t pinId, int lastState)
   dispatchers_[pinId] = this;
 }
 
-void InterruptDispatcher::begin(int mode)
+void InterruptDispatcher::begin()
 {
-  attachInterrupt(digitalPinToInterrupt(pinId_), trampolines[pinId_], mode);
-  lastState_ = digitalRead(pinId_);
+  if (initialized_)
+    return;
+
+  if (!hasHandlers())
+    return;
+
+  pinMode(pinId_, INPUT_PULLUP); // TODO REMOVE ME
+
+  int irq = digitalPinToInterrupt(pinId_);
+  if (irq == NOT_AN_INTERRUPT)
+  {
+    Serial.print("ERROR: Pin ");
+    Serial.print(pinId_);
+    Serial.println(" does not support interrupts!");
+    return;
+  }
+
+  // Always attach in CHANGE. Software decides edges/levels.
+  attachInterrupt(irq, trampolines[pinId_], CHANGE);
+
+  lastState_ = fastRead(pinId_);
+  lastInterruptTime_ = millis();
+  initialized_ = true;
 }
 
 void InterruptDispatcher::setDebounce(unsigned long ms)
@@ -43,33 +64,81 @@ void InterruptDispatcher::setDebounce(unsigned long ms)
   debounceMs_ = ms;
 }
 
+bool InterruptDispatcher::hasHandlers() const
+{
+  return !lowHandlers_.empty() ||
+         !highHandlers_.empty() ||
+         !changeHandlers_.empty() ||
+         !risingHandlers_.empty() ||
+         !fallingHandlers_.empty();
+}
+
+inline int InterruptDispatcher::fastRead(uint8_t pin)
+{
+#if defined(ARDUINO_ARCH_AVR)
+  uint8_t port = digitalPinToPort(pin);
+  if (port == NOT_A_PIN)
+    return digitalRead(pin);
+  volatile uint8_t *reg = portInputRegister(port);
+  uint8_t mask = digitalPinToBitMask(pin);
+  return ((*reg & mask) ? HIGH : LOW);
+#else
+  return digitalRead(pin);
+#endif
+}
+
 void InterruptDispatcher::handleInterrupt()
 {
   unsigned long now = millis();
-  if (now - lastInterruptTime_ < debounceMs_)
+
+  if (debounceMs_ && (now - lastInterruptTime_ < debounceMs_))
     return;
 
-  int newState = digitalRead(pinId_);
+  int oldState = lastState_;
+  int newState = fastRead(pinId_);
 
+  // Latch time/state before calling user code
+  lastInterruptTime_ = now;
+  lastState_ = newState;
+
+  // Serial.print(" | debounce: ");
+  // Serial.print(debounceMs_);
+  // Serial.print(" | diff: ");
+  // Serial.print(now - lastInterruptTime_);
+  // Serial.print(" | pin: ");
+  // Serial.print(pinId_);
+  // Serial.print(" | old state: ");
+  // Serial.print(lastState_);
+  // Serial.print(" -> new state: ");
+  // Serial.println(newState);
+
+  Serial.print(hasHandlers());
+
+  // Dispatch
   for (auto &cb : changeHandlers_)
     cb();
 
-  if (newState == HIGH && lastState_ == LOW)
+  if (oldState == LOW && newState == HIGH)
+  {
     for (auto &cb : risingHandlers_)
       cb();
-  if (newState == LOW && lastState_ == HIGH)
+  }
+  else if (oldState == HIGH && newState == LOW)
+  {
     for (auto &cb : fallingHandlers_)
       cb();
+  }
 
   if (newState == HIGH)
+  {
     for (auto &cb : highHandlers_)
       cb();
+  }
   else
+  {
     for (auto &cb : lowHandlers_)
       cb();
-
-  lastState_ = newState;
-  lastInterruptTime_ = now;
+  }
 }
 
 void InterruptDispatcher::onLow(Callback cb) { lowHandlers_.push_back(cb); }
