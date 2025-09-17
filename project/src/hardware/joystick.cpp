@@ -21,14 +21,79 @@ Joystick &Joystick::begin()
   return *this;
 }
 
-int Joystick::readX()
+JoystickReading Joystick::read()
 {
-  return xPin_.analogReadValue();
+  int rawX = xPin_.analogReadValue();
+  int rawY = yPin_.analogReadValue();
+
+  // normalize
+  float normX = normalizeAxis(rawX, centerX_, 0, maxX_);
+  float normY = normalizeAxis(rawY, centerY_, 0, maxY_);
+
+  // rotate, clamp, correct deadzone, curve shaping
+  applyRotation(normX, normY);
+  clampToUnit(normX, normY);
+  bool isIdle = applyDeadzone(normX, normY);
+
+  if (!isIdle)
+    applyCurve(normX, normY);
+
+  // cache values for consistent partial reads
+  lastX_ = normX;
+  lastY_ = normY;
+  lastIdle_ = isIdle;
+
+  return JoystickReading{normX, normY, isIdle};
 }
 
-int Joystick::readY()
+void Joystick::applyRotation(float &x, float &y)
 {
-  return yPin_.analogReadValue();
+  float oldX = x, oldY = y;
+
+  switch (rotation_)
+  {
+  case Joystick::Rotation::None:
+    break;
+  case Joystick::Rotation::CW90:
+    x = oldY;
+    y = -oldX;
+    break;
+  case Rotation::CW180:
+    x = -oldX;
+    y = -oldY;
+    break;
+  case Joystick::Rotation::CW270:
+    x = -oldY;
+    y = oldX;
+    break;
+  }
+}
+
+void Joystick::clampToUnit(float &x, float &y)
+{
+  x = constrain(x, -1.0f, 1.0f);
+  y = constrain(y, -1.0f, 1.0f);
+}
+
+bool Joystick::applyDeadzone(float &x, float &y)
+{
+  float magnitude = sqrt(x * x + y * y);
+  if (magnitude < deadzoneUnits_)
+  {
+    x = 0;
+    y = 0;
+    return true; // joystick idle
+  }
+  return false;
+}
+
+void Joystick::applyCurve(float &x, float &y)
+{
+  if (curvePotential_ != 1.0f)
+  {
+    x = copysign(pow(fabs(x), curvePotential_), x);
+    y = copysign(pow(fabs(y), curvePotential_), y);
+  }
 }
 
 bool Joystick::isButtonPressed()
@@ -39,4 +104,14 @@ bool Joystick::isButtonPressed()
 void Joystick::onPress(Callback cb)
 {
   buttonPin_.interruptDispatcher().onChange(cb);
+}
+
+float Joystick::normalizeAxis(int raw, int center, int min, int max)
+{
+  if (raw >= center)
+    // Right/up side
+    return (raw - center) / float(max - center);
+
+  // Left/down side
+  return (raw - center) / float(center - min);
 }

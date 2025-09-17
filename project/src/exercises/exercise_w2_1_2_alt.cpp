@@ -56,8 +56,9 @@ namespace ex_w2_1_2_alt
 
   void exerciseOne()
   {
-    int xValue = p::joystick::device.readX();
-    int yValue = 1023 - p::joystick::device.readY(); // correct direction for the board
+    JoystickReading reading = p::joystick::device.read();
+    int xValue = map(reading.xUnits * 100, -100, 100, 0, 1023);
+    int yValue = map(reading.yUnits * 100, -100, 100, 0, 1023);
 
     printCoordinate(xValue, 0, "X");
     printCoordinate(yValue, 1, "Y");

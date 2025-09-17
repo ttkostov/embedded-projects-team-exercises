@@ -32,7 +32,28 @@ namespace physical
     inline PinBuilder btn(19);
 
     inline Joystick &device = JoystickBuilder(x, y, btn)
+                                  .withRotation(Joystick::Rotation::CW270)
+                                  .withCenter(512, 510)
+                                  .withDeadzone(0.05)
                                   .setPressDebounce(200)
                                   .build();
+  }
+
+  namespace motor
+  {
+    inline PinBuilder leftPwm(9);
+    inline PinBuilder leftDirection(7);
+
+    inline PinBuilder rightPwm(10);
+    inline PinBuilder rightDirection(8);
+
+    inline Motor leftMotor(leftPwm, leftDirection);
+    inline Motor rightMotor(rightPwm, rightDirection);
+  }
+
+  namespace car
+  {
+    inline JoystickMotorDriver joystickDriver(motor::leftMotor, motor::rightMotor, joystick::device);
+    inline Car device(joystick::device, motor::leftMotor, motor::rightMotor, joystickDriver);
   }
 }
