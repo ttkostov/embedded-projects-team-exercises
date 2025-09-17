@@ -38,7 +38,5 @@ bool Joystick::isButtonPressed()
 
 void Joystick::onPress(Callback cb)
 {
-  Serial.println(buttonPin_.interruptDispatcher().hasHandlers());
   buttonPin_.interruptDispatcher().onChange(cb);
-  Serial.println(buttonPin_.interruptDispatcher().hasHandlers());
 }

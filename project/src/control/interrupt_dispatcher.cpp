@@ -40,8 +40,6 @@ void InterruptDispatcher::begin()
   if (!hasHandlers())
     return;
 
-  pinMode(pinId_, INPUT_PULLUP); // TODO REMOVE ME
-
   int irq = digitalPinToInterrupt(pinId_);
   if (irq == NOT_AN_INTERRUPT)
   {
@@ -100,19 +98,6 @@ void InterruptDispatcher::handleInterrupt()
   // Latch time/state before calling user code
   lastInterruptTime_ = now;
   lastState_ = newState;
-
-  // Serial.print(" | debounce: ");
-  // Serial.print(debounceMs_);
-  // Serial.print(" | diff: ");
-  // Serial.print(now - lastInterruptTime_);
-  // Serial.print(" | pin: ");
-  // Serial.print(pinId_);
-  // Serial.print(" | old state: ");
-  // Serial.print(lastState_);
-  // Serial.print(" -> new state: ");
-  // Serial.println(newState);
-
-  Serial.print(hasHandlers());
 
   // Dispatch
   for (auto &cb : changeHandlers_)
