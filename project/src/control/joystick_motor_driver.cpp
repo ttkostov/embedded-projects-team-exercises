@@ -26,6 +26,8 @@ void JoystickMotorDriver::tick()
   float rightPowerUnits = joystickState.yUnits - joystickState.xUnits;
   rightPowerUnits = constrain(rightPowerUnits, -1.0, 1.0);
   rightMotor_.setPower(rightPowerUnits);
+
+  // Serial.println("Left Power: " + String(leftPowerUnits) + ", Right Power: " + String(rightPowerUnits));
 }
 
 JoystickVectorMotorDriver::JoystickVectorMotorDriver(Motor &leftMotor, Motor &rightMotor, Joystick &joystick)

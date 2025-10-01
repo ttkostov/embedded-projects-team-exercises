@@ -28,7 +28,7 @@ JoystickReading Joystick::read()
 
   // normalize
   float normX = normalizeAxis(rawX, centerX_, 0, maxX_);
-  float normY = normalizeAxis(rawY, centerY_, 0, maxY_);
+  float normY = -normalizeAxis(rawY, centerY_, 0, maxY_); // Negate Y to have up = positive
 
   // rotate, clamp, correct deadzone, curve shaping
   applyRotation(normX, normY);
@@ -52,9 +52,10 @@ void Joystick::applyRotation(float &x, float &y)
 
   switch (rotation_)
   {
-  case Joystick::Rotation::None:
+  case Rotation::None:
+    // no change
     break;
-  case Joystick::Rotation::CW90:
+  case Rotation::CW90:
     x = oldY;
     y = -oldX;
     break;
@@ -62,7 +63,7 @@ void Joystick::applyRotation(float &x, float &y)
     x = -oldX;
     y = -oldY;
     break;
-  case Joystick::Rotation::CW270:
+  case Rotation::CW270:
     x = -oldY;
     y = oldX;
     break;

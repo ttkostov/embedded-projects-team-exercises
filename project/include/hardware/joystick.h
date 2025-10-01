@@ -45,7 +45,7 @@ private:
   Rotation rotation_ = Rotation::None;
   int centerX_ = 512;
   int centerY_ = 512;
-  float deadzoneUnits_ = 0.05; // 5%
+  float deadzoneUnits_ = 0.00; // 0%
   float curvePotential_ = 1.0; // 1.0 = linear
 
   // Cached values

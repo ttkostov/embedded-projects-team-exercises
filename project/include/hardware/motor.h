@@ -28,6 +28,6 @@ private:
 
   const unsigned int maxPower_ = 1023;
 
-  unsigned int currentPowerUnits_ = 0; // -1.0 to 1.0
+  float currentPowerUnits_ = 0; // 0 to 1.0
   Direction currentDirection_ = FORWARD;
 };

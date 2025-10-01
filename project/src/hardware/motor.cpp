@@ -23,16 +23,17 @@ Motor &Motor::tick()
   if (!motorStateChanged_)
     return *this;
 
-  powerPin_.analogWriteValue(map(currentPowerUnits_ * 100, 0, 100, 0, maxPower_));
+  int powerValue = map(currentPowerUnits_ * 100, 0, 100, 0, maxPower_);
+  powerPin_.analogWriteValue(powerValue);
 
   switch (currentDirection_)
   {
   case Direction::FORWARD:
-    directionPin_.setLow();
+    directionPin_.setHigh();
     break;
 
   case Direction::BACKWARD:
-    directionPin_.setHigh();
+    directionPin_.setLow();
     break;
   }
 
