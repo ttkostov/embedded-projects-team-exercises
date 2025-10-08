@@ -22,11 +22,10 @@ inline Callback makeCallback(void (*fn)())
   {
     void (*func)();
   };
-  static Data data; // lives forever
-  data.func = fn;
+  auto *data = new Data{fn};
 
   return {
-      &data,
+      data,
       [](void *ctx)
       {
         auto *d = static_cast<Data *>(ctx);

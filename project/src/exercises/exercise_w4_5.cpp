@@ -4,7 +4,26 @@
 #include "hardware.h"
 #include "physical.h"
 
-namespace ex_w4_4
+/*
+1754, 4001ms, 65cm
+1755, 4001ms, 65.5cm
+1742, 4001ms, 65.5cm
+
+weight:
+l: 1556, 52cm -> 29.9230
+l: 1601, 58cm -> 27.603
+
+r: 1586, 57.8cm -> 27.4394
+r: 1577, 57cm -> 27.6666
+
+
+left=1590,27.226 right=1566,26.815 58.4
+left=1593,27.277 right=1576,26.986 58.4
+left=1564,27.342 right=1563,27.325 57.2
+left=1606,27.037 right=1585,26.683 59.4
+*/
+
+namespace ex_w4_5
 {
 
   namespace p = physical;
@@ -18,6 +37,10 @@ namespace ex_w4_4
 
   void exerciseTwo();
   void onButtonPressed();
+
+  float targetDistanceCm = 5;
+  float encodingsPerCm = 27.2305;
+  float targetEncodings = targetDistanceCm * encodingsPerCm;
 
   unsigned long leftCounter = 0;
   unsigned long rightCounter = 0;
@@ -37,10 +60,23 @@ namespace ex_w4_4
     p::joystick::device.onPress(makeCallback(onButtonPressed));
     p::joystick::device.begin();
 
-    p::motor::encoderLeft.asInputPullup().withChangeInterrupt(makeCallback(
-                                                                  []()
-                                                                  {
-    if(countEncodings) leftCounter++; }))
+    p::motor::encoderLeft
+        .asInputPullup()
+        .withChangeInterrupt(
+            makeCallback(
+                []()
+                {
+                  if (countEncodings)
+                    leftCounter++;
+
+                  if (leftCounter >= targetEncodings && countEncodings)
+                  {
+                    stopMotor();
+                    countEncodings = false;
+
+                    Serial.println("Final counter: left=" + String(leftCounter) + " right=" + String(rightCounter) + "in time: " + String(millis() - runStartTime) + " ms");
+                  }
+                }))
         .build()
         .begin();
 
@@ -56,11 +92,13 @@ namespace ex_w4_4
 
   void loop()
   {
+
+    exerciseTwo();
     // p::lcd::device.clear();
 
     // toggleScreen ? exerciseOne() : exerciseTwo();
 
-    if (millis() > 5000 && !done)
+    if (millis() > 2000 && !done)
     {
       runMotor = true;
       done = true;
@@ -74,24 +112,13 @@ namespace ex_w4_4
       runMotor = false;
     }
 
-    if (millis() - runStartTime > 4000 && countEncodings)
-    {
-      stopMotor();
-      countEncodings = false;
-
-      Serial.println("Final counter: left=" + String(leftCounter) + " right=" + String(rightCounter) + "in time: " + String(millis() - runStartTime) + " ms");
-    }
-
     delay(200);
   }
 
   void exerciseTwo()
   {
-
-    p::lcd::device.setCursor(0, 0);
-    p::lcd::device.print("Push counter:");
-    p::lcd::device.setCursor(0, 1);
-    p::lcd::device.print(leftCounter);
+    p::lcd::device.printLine(0, "Left:" + String(leftCounter));
+    p::lcd::device.printLine(1, "Right:" + String(rightCounter));
   }
 
   void startMotor()
