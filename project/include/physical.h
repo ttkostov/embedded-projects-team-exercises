@@ -7,12 +7,12 @@ namespace physical
 
   namespace lcd
   {
-    inline PinBuilder rs(37);
-    inline PinBuilder en(36);
-    inline PinBuilder d4(35);
-    inline PinBuilder d5(34);
-    inline PinBuilder d6(33);
-    inline PinBuilder d7(32);
+    inline PinBuilder rs(51);
+    inline PinBuilder en(50);
+    inline PinBuilder d4(48);
+    inline PinBuilder d5(49);
+    inline PinBuilder d6(47);
+    inline PinBuilder d7(46);
 
     inline LCDDisplay &device = LCDDisplayBuilder()
                                     .withRegisterSelect(rs)
@@ -27,13 +27,15 @@ namespace physical
 
   namespace joystick
   {
-    inline PinBuilder x(A7);
-    inline PinBuilder y(A8);
-    inline PinBuilder btn(19);
+    inline PinBuilder x(A8);
+    inline PinBuilder y(A7);
+    inline PinBuilder btn(18);
 
     inline Joystick &device = JoystickBuilder(x, y, btn)
                                   .withRotation(Joystick::Rotation::None)
-                                  .withCenter(511, 518)
+                                  .withCenter(500, 493)
+                                  .withMin(19, 19)
+                                  .withMax(1007, 1007)
                                   // .withDeadzone(0.05)
                                   .setPressDebounce(200)
                                   .build();

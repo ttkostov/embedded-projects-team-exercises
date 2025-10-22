@@ -39,8 +39,11 @@ private:
   Pin &yPin_;
   Pin &buttonPin_;
 
-  const int maxX_ = 1023;
-  const int maxY_ = 1023;
+  int maxX_ = 1023;
+  int maxY_ = 1023;
+
+  int minX_ = 0;
+  int minY_ = 0;
 
   Rotation rotation_ = Rotation::None;
   int centerX_ = 512;
@@ -70,6 +73,8 @@ public:
 
   JoystickBuilder &withRotation(Joystick::Rotation rotation);
   JoystickBuilder &withCenter(int centerX, int centerY);
+  JoystickBuilder &withMax(int maxX, int maxY);
+  JoystickBuilder &withMin(int minX, int minY);
   JoystickBuilder &withDeadzone(float deadzoneUnits);
   JoystickBuilder &withCurve(float curvePotential);
 
@@ -85,6 +90,14 @@ private:
   Joystick::Rotation rotation_ = Joystick::Rotation::None;
   bool hasRotation_ = false;
 
+  int maxX_;
+  int maxY_;
+  int hasMax_ = false;
+
+  int minX_;
+  int minY_;
+  int hasMin_ = false;
+
   int centerX_;
   int centerY_;
   bool hasCenter_ = false;
@@ -96,6 +109,4 @@ private:
   bool hasCurve_ = false;
 
   std::vector<Callback> pressHandlers_;
-
-  float normalizeAxis(int raw, int center, int min, int max);
 };

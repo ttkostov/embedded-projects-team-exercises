@@ -30,6 +30,22 @@ JoystickBuilder &JoystickBuilder::withCenter(int centerX, int centerY)
   return *this;
 }
 
+JoystickBuilder &JoystickBuilder::withMax(int maxX, int maxY)
+{
+  maxX_ = maxX;
+  maxY_ = maxY;
+  hasMax_ = true;
+  return *this;
+}
+
+JoystickBuilder &JoystickBuilder::withMin(int minX, int minY)
+{
+  minX_ = minX;
+  minY_ = minY;
+  hasMin_ = true;
+  return *this;
+}
+
 JoystickBuilder &JoystickBuilder::withDeadzone(float deadzoneUnits)
 {
   deadzoneUnits_ = deadzoneUnits;
@@ -60,6 +76,18 @@ Joystick &JoystickBuilder::build()
   {
     js->centerX_ = centerX_;
     js->centerY_ = centerY_;
+  }
+
+  if (hasMax_)
+  {
+    js->maxX_ = maxX_;
+    js->maxY_ = maxY_;
+  }
+
+  if (hasMin_)
+  {
+    js->minX_ = minX_;
+    js->minY_ = minY_;
   }
 
   if (hasDeadzone_)

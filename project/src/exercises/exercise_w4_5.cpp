@@ -38,7 +38,7 @@ namespace ex_w4_5
   void exerciseTwo();
   void onButtonPressed();
 
-  float targetDistanceCm = 5;
+  float targetDistanceCm = 100.5;
   float encodingsPerCm = 27.2305;
   float targetEncodings = targetDistanceCm * encodingsPerCm;
 
