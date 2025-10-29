@@ -43,6 +43,12 @@ namespace ex_w4_5
   void loop();
 }
 
+namespace ex_5_1
+{
+  void setup();
+  void loop();
+}
+
 namespace sandbox
 {
   void setup();
