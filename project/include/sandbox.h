@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "physical.h"
+#include "control/state_machine.h"
 
 namespace p = physical;
 

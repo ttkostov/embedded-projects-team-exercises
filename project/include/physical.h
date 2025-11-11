@@ -41,6 +41,12 @@ namespace physical
                                   .build();
   }
 
+  namespace compass
+  {
+    inline uint8_t address = 0x60;
+    inline Compass device = Compass(address);
+  }
+
   namespace motor
   {
     inline PinBuilder leftPwm(9);
@@ -51,6 +57,14 @@ namespace physical
 
     inline PinBuilder encoderLeft(2);
     inline PinBuilder encoderRight(3);
+
+    auto &leftEncoder = EncoderBuilder(encoderLeft)
+                            .withEncodingsPerCm(27.2305f)
+                            .build();
+
+    auto &rightEncoder = EncoderBuilder(encoderRight)
+                             .withEncodingsPerCm(27.2305f)
+                             .build();
 
     inline Motor leftMotor(leftPwm, leftDirection);
     inline Motor rightMotor(rightPwm, rightDirection);

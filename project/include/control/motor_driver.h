@@ -1,6 +1,9 @@
 #include <Arduino.h>
-#include <hardware/motor.h>
-#include <hardware/joystick.h>
+#include "hardware/motor.h"
+#include "hardware/joystick.h"
+#include "hardware/compass.h"
+#include "util/directional.h"
+#include "hardware/encoder.h"
 
 class IMotorDriver
 {
@@ -41,4 +44,63 @@ private:
   Motor &rightMotor_;
 
   Joystick &joystick_;
+};
+
+class CompassHeadingMotorDriver : public IMotorDriver
+{
+public:
+  CompassHeadingMotorDriver(Motor &leftMotor, Motor &rightMotor, Compass &compass);
+
+  void begin() override;
+  void tick() override;
+
+  void setTolerance(const Angle &tolerance);
+  void setTargetHeading(const Angle &heading);
+  bool hasReachedTarget() const;
+
+private:
+  bool initialized_ = false;
+
+  Motor &leftMotor_;
+  Motor &rightMotor_;
+
+  Compass &compass_;
+
+  Angle targetHeading_;
+  bool targetSet_ = false;
+  Angle tolerance_ = Angle(5.0);
+
+  bool approachTarget();
+};
+
+// Drives both motors straight based on a single encoder measurement.
+class DistanceMotorDriver : public IMotorDriver
+{
+public:
+  DistanceMotorDriver(Motor &leftMotor, Motor &rightMotor, Encoder &encoder);
+
+  void begin() override;
+  void tick() override;
+
+  // Configure a target distance (in cm) and power (-1.0 - 1.0)
+  void setTargetDistance(float distanceCm, float power = 0.5f);
+  bool hasReachedTarget() const;
+
+  void reset();
+
+private:
+  Motor &leftMotor_;
+  Motor &rightMotor_;
+  Encoder &encoder_;
+
+  bool initialized_ = false;
+  bool targetSet_ = false;
+  bool reachedTarget_ = false;
+
+  float targetDistanceCm_ = 0.0f;
+  float startDistanceCm_ = 0.0f;
+  float drivePower_ = 0.5f;
+
+  void driveStraight();
+  void stopMotors();
 };
