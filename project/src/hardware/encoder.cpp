@@ -24,18 +24,18 @@ Encoder &Encoder::begin()
 
 void Encoder::reset()
 {
-  noInterrupts();
+  // noInterrupts();
   tickCount_ = 0;
-  interrupts();
+  // interrupts();
 }
 
 EncoderReading Encoder::read() const
 {
   EncoderReading r;
 
-  noInterrupts();
+  // noInterrupts();
   r.ticks = tickCount_;
-  interrupts();
+  // interrupts();
 
   r.distanceCm = r.ticks / encodingsPerCm_;
 
@@ -44,18 +44,18 @@ EncoderReading Encoder::read() const
 
 unsigned long Encoder::getTicks() const
 {
-  noInterrupts();
+  // noInterrupts();
   unsigned long t = tickCount_;
-  interrupts();
+  // interrupts();
 
   return t;
 }
 
 float Encoder::getDistanceCm() const
 {
-  noInterrupts();
+  // noInterrupts();
   unsigned long t = tickCount_;
-  interrupts();
+  // interrupts();
 
   return t / encodingsPerCm_;
 }

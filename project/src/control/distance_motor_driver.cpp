@@ -21,7 +21,7 @@ void DistanceMotorDriver::begin()
   reachedTarget_ = false;
 }
 
-void DistanceMotorDriver::setTargetDistance(float distanceCm, float power)
+void DistanceMotorDriver::setTarget(float distanceCm, float power)
 {
   if (!initialized_)
     return;
@@ -49,12 +49,14 @@ bool DistanceMotorDriver::hasReachedTarget() const
 void DistanceMotorDriver::tick()
 {
   if (!initialized_ || !targetSet_ || reachedTarget_)
+  {
+    Serial.println("Skipping tick: not initialized, target not set, or target already reached.");
     return;
+  }
 
-  // How far we've gone since starting
-  float distanceCm = encoder_.getDistanceCm() - startDistanceCm_;
+  float distanceSinceStartCm = encoder_.getDistanceCm() - startDistanceCm_;
 
-  if (distanceCm >= targetDistanceCm_)
+  if (distanceSinceStartCm >= targetDistanceCm_)
   {
     stopMotors();
     reachedTarget_ = true;
@@ -62,10 +64,14 @@ void DistanceMotorDriver::tick()
   }
 
   driveStraight();
+
+  leftMotor_.tick();
+  rightMotor_.tick();
 }
 
 void DistanceMotorDriver::driveStraight()
 {
+  Serial.println("Driving straight with power: " + String(drivePower_));
   leftMotor_.setPower(drivePower_);
   rightMotor_.setPower(drivePower_);
 }

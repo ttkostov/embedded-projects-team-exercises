@@ -22,8 +22,9 @@ namespace ex_5_6_alt
     float targetDistanceCm = 0;
 
     unsigned int currentStep = 0;
-    Angle headingsByStep[4] = {Angle(0), Angle(90), Angle(180), Angle(270)};
-    float distancesCmByStep[4] = {50.0, 75.0, 100.0, 125.0};
+    Angle headingsByStep[4] = {Angle(110), Angle(110), Angle(0)};
+    float distancesCmByStep[4] = {20, 13, 20};
+    float powersByStep[4] = {0.75, 0.25, 0.5};
 
     unsigned long now() const { return millis(); }
   };
@@ -37,96 +38,85 @@ namespace ex_5_6_alt
   };
 
   // ------------------------------
-  // Forward declarations
-  // ------------------------------
-  struct DriveState;
-  struct IdleState;
-
-  // ------------------------------
-  // State class declarations only
+  // State definitions
   // ------------------------------
   struct IdleState : IState<RobotContext>
   {
-    IdleState();
-    static IdleState &instance();
-    void onEnter(RobotContext &ctx) override;
-    void tick(RobotContext &ctx) override;
+    IdleState() : IState<RobotContext>("Idle") {}
+
+    static IdleState &instance()
+    {
+      static IdleState s;
+      return s;
+    }
+
+    void onEnter(RobotContext &ctx) override
+    {
+      p::motor::leftMotor.stop();
+      p::motor::rightMotor.stop();
+      ctx.currentStep = 0;
+    }
+
+    void tick(RobotContext &ctx) override
+    {
+      p::motor::leftMotor.stop();
+      p::motor::rightMotor.stop();
+      p::motor::leftMotor.tick();
+      p::motor::rightMotor.tick();
+
+      Serial.println(F("[Idle] Waiting for events..."));
+    }
+
     void onEvent(RobotContext &ctx, const Event &ev) override;
   };
 
   struct DriveState : IState<RobotContext>
   {
-    DriveState();
-    static DriveState &instance();
-    void onEnter(RobotContext &ctx) override;
-    void tick(RobotContext &ctx) override;
-    void onExit(RobotContext &ctx) override;
+    DriveState() : IState<RobotContext>("Drive") {}
 
-  private:
-    unsigned long startTime_ = 0;
+    static DriveState &instance()
+    {
+      static DriveState s;
+      return s;
+    }
+
+    void onEnter(RobotContext &ctx) override
+    {
+      p::car::distanceDriver.reset();
+
+      float distanceCm = ctx.distancesCmByStep[ctx.currentStep];
+      float drivePower = ctx.powersByStep[ctx.currentStep];
+      p::car::distanceDriver.setTarget(distanceCm, drivePower);
+    }
+
+    void onExit(RobotContext &ctx) override
+    {
+      p::motor::leftMotor.stop();
+      p::motor::rightMotor.stop();
+    }
+
+    void tick(RobotContext &ctx) override;
   };
 
   // ------------------------------
-  // Definitions (in any order now)
+  // Circularly dependant state methods
   // ------------------------------
-  IdleState::IdleState() : IState<RobotContext>("Idle") {}
-  IdleState &IdleState::instance()
-  {
-    static IdleState s;
-    return s;
-  }
-
-  void IdleState::onEnter(RobotContext &ctx)
-  {
-    Serial.println(F("[Idle] Entered"));
-    p::motor::leftMotor.stop();
-    p::motor::rightMotor.stop();
-    ctx.currentStep = 0;
-  }
-
-  void IdleState::tick(RobotContext &)
-  {
-    Serial.println(F("[Idle] Waiting for button press..."));
-  }
-
   void IdleState::onEvent(RobotContext &ctx, const Event &ev)
   {
     if (ev.name() == ButtonPressedEvent::StaticName)
     {
-      Serial.println(F("[Idle] Button pressed → DriveState"));
       ctx.stateMachine->transitionTo(DriveState::instance());
     }
   }
 
-  // ------------------------------
-  DriveState::DriveState() : IState<RobotContext>("Drive") {}
-  DriveState &DriveState::instance()
-  {
-    static DriveState s;
-    return s;
-  }
-
-  void DriveState::onEnter(RobotContext &ctx)
-  {
-    Serial.println(F("[Drive] Entered"));
-    startTime_ = ctx.now();
-  }
-
   void DriveState::tick(RobotContext &ctx)
   {
-    Serial.println(F("[Drive] Driving..."));
-    if (ctx.now() - startTime_ > 3000)
+    Serial.println(F("[Drive] Driving to target..."));
+    p::car::distanceDriver.tick();
+    if (p::car::distanceDriver.hasReachedTarget())
     {
-      Serial.println(F("[Drive] Done → IdleState"));
       ctx.stateMachine->transitionTo(IdleState::instance());
     }
-  }
-
-  void DriveState::onExit(RobotContext &ctx)
-  {
-    p::motor::leftMotor.stop();
-    p::motor::rightMotor.stop();
-    Serial.println(F("[Drive] Exit"));
   }
 
   // ------------------------------

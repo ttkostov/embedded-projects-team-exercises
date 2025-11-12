@@ -83,7 +83,7 @@ public:
   void tick() override;
 
   // Configure a target distance (in cm) and power (-1.0 - 1.0)
-  void setTargetDistance(float distanceCm, float power = 0.5f);
+  void setTarget(float distanceCm, float power = 0.5f);
   bool hasReachedTarget() const;
 
   void reset();
