@@ -2,7 +2,7 @@
 #include "hardware/compass.h"
 #include "communication/i2c.h"
 
-Compass::Compass(uint8_t address) : i2cAddress_(address), i2cBus_(I2CBus()) {}
+Compass::Compass(uint8_t address) : i2cAddress_(address) {}
 
 Compass &Compass::begin()
 {
@@ -31,8 +31,8 @@ void Compass::setNorthToHeading()
 
 Angle Compass::readHeading()
 {
-  byte high_byte = i2cBus_.readByte(i2cAddress_, 2);
-  byte low_byte = i2cBus_.readByte(i2cAddress_, 3);
+  byte high_byte = I2CBus::instance().readByte(i2cAddress_, 2);
+  byte low_byte = I2CBus::instance().readByte(i2cAddress_, 3);
 
   int heading = (high_byte << 8) | low_byte; // Combine high and low bytes
 

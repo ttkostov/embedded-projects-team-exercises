@@ -58,13 +58,13 @@ namespace physical
     inline PinBuilder encoderLeft(2);
     inline PinBuilder encoderRight(3);
 
-    auto &leftEncoder = EncoderBuilder(encoderLeft)
-                            .withEncodingsPerCm(27.2305f)
-                            .build();
+    inline auto &leftEncoder = EncoderBuilder(encoderLeft)
+                                   .withEncodingsPerCm(27.2305f)
+                                   .build();
 
-    auto &rightEncoder = EncoderBuilder(encoderRight)
-                             .withEncodingsPerCm(27.2305f)
-                             .build();
+    inline auto &rightEncoder = EncoderBuilder(encoderRight)
+                                    .withEncodingsPerCm(27.2305f)
+                                    .build();
 
     inline Motor leftMotor(leftPwm, leftDirection);
     inline Motor rightMotor(rightPwm, rightDirection);
@@ -73,6 +73,28 @@ namespace physical
   namespace car
   {
     inline JoystickMotorDriver joystickDriver(motor::leftMotor, motor::rightMotor, joystick::device);
+    inline CompassHeadingMotorDriver compassDriver(motor::leftMotor, motor::rightMotor, compass::device);
+    inline DistanceMotorDriver distanceDriver(motor::leftMotor, motor::rightMotor, motor::leftEncoder);
+
     inline Car device(joystick::device, motor::leftMotor, motor::rightMotor, joystickDriver);
+
+    inline void beginAll()
+    {
+      lcd::device.begin();
+
+      joystick::device.begin();
+
+      compass::device.begin();
+
+      motor::leftEncoder.begin();
+      motor::rightEncoder.begin();
+
+      motor::leftMotor.begin();
+      motor::rightEncoder.begin();
+
+      joystickDriver.begin();
+      compassDriver.begin();
+      distanceDriver.begin();
+    }
   }
 }

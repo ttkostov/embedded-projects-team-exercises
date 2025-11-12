@@ -32,7 +32,6 @@ private:
   bool initialized_ = false;
 
   uint8_t i2cAddress_ = 0x60;
-  I2CBus i2cBus_;
 
   Angle headingOffset_ = Angle(0);
 

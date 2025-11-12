@@ -1,17 +1,27 @@
-
 #pragma once
 #include <Arduino.h>
+
+struct Event
+{
+  virtual ~Event() {}
+  virtual const char *name() const = 0;
+};
+
+#define DEFINE_EVENT_TYPE(NameLiteral)                   \
+  static constexpr const char *StaticName = NameLiteral; \
+  const char *name() const override { return StaticName; }
 
 template <typename Context>
 struct IState
 {
+  const char *name;
+  IState(const char *stateName) : name(stateName) {}
   virtual ~IState() {}
-  virtual void onEnter(Context &ctx) {}
-  virtual void onExit(Context &ctx) {}
 
-  virtual void tick(Context &ctx) = 0;
-
-  virtual void onEvent(Context &ctx, const String &ev) {}
+  virtual void onEnter(Context &ctx) {};
+  virtual void onExit(Context &ctx) {};
+  virtual void onEvent(Context &ctx, const Event &ev) {};
+  virtual void tick(Context &ctx) {};
 };
 
 template <typename Context>
@@ -21,8 +31,9 @@ public:
   StateMachine(Context &ctx, IState<Context> &initial)
       : ctx_(ctx), current_(&initial)
   {
-    // inject pointer so states can ask for transitions
     ctx_.stateMachine = this;
+
+    Serial.println("[" + String(current_->name) + "]: Used as initial state");
     current_->onEnter(ctx_);
   }
 
@@ -37,20 +48,32 @@ public:
     if (&next == current_)
       return;
 
-    // exit current
     if (current_)
+    {
+      Serial.println("[" + String(current_->name) + "]: Exiting...");
       current_->onExit(ctx_);
+    }
 
-    // switch state
     previous_ = current_;
     current_ = &next;
 
-    // enter next
     if (current_)
+    {
+      Serial.println("[" + String(current_->name) + "]: Entering...");
       current_->onEnter(ctx_);
+    }
   }
 
   IState<Context> *current() const { return current_; }
+
+  void handleEvent(const Event &ev)
+  {
+    if (current_)
+    {
+      Serial.println("[" + String(current_->name) + "]: Sending event '" + String(ev.name()) + "'");
+      current_->onEvent(ctx_, ev);
+    }
+  }
 
 private:
   Context &ctx_;

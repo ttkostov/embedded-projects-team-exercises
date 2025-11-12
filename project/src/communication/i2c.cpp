@@ -5,9 +5,13 @@
 I2CBus &I2CBus::begin()
 {
   if (initialized_)
-    return;
+    return *this;
 
   initialized_ = true;
+
+  Wire.begin();
+
+  return *this;
 }
 
 byte I2CBus::readByte(uint8_t address, uint8_t reg)

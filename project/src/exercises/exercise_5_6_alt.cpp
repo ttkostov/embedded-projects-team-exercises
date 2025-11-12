@@ -11,126 +11,156 @@ namespace ex_5_6_alt
 {
   namespace p = physical;
 
+  // ------------------------------
+  // Shared robot runtime context
+  // ------------------------------
   struct RobotContext
   {
-    // Pointer to the owning state machine (injected automatically)
     StateMachine<RobotContext> *stateMachine = nullptr;
 
-    // Shared runtime data
     Angle targetHeading = Angle(0);
+    float targetDistanceCm = 0;
+
+    unsigned int currentStep = 0;
+    Angle headingsByStep[4] = {Angle(0), Angle(90), Angle(180), Angle(270)};
+    float distancesCmByStep[4] = {50.0, 75.0, 100.0, 125.0};
 
     unsigned long now() const { return millis(); }
   };
 
+  // ------------------------------
+  // Event definitions
+  // ------------------------------
+  struct ButtonPressedEvent : Event
+  {
+    DEFINE_EVENT_TYPE("ButtonPressed");
+  };
+
+  // ------------------------------
+  // Forward declarations
+  // ------------------------------
+  struct DriveState;
+  struct IdleState;
+
+  // ------------------------------
+  // State class declarations only
+  // ------------------------------
   struct IdleState : IState<RobotContext>
   {
-    static IdleState &instance()
-    {
-      static IdleState s;
-      return s;
-    }
-
-    void onEnter(RobotContext &ctx) override
-    {
-      Serial.println(F("[Idle] Enter"));
-      p::motor::leftMotor.stop();
-      p::motor::rightMotor.stop();
-    }
-
-    void tick(RobotContext &ctx) override
-    {
-      // Example: check joystick or serial
-      if (ctx.joystick.isButtonPressed())
-      {
-        Serial.println(F("[Idle] Joystick pressed, start driving"));
-        ctx.stateMachine->transitionTo(DriveState::instance());
-      }
-    }
+    IdleState();
+    static IdleState &instance();
+    void onEnter(RobotContext &ctx) override;
+    void tick(RobotContext &ctx) override;
+    void onEvent(RobotContext &ctx, const Event &ev) override;
   };
 
   struct DriveState : IState<RobotContext>
   {
-    static DriveState &instance()
-    {
-      static DriveState s;
-      return s;
-    }
-
-    void onEnter(RobotContext &ctx) override
-    {
-      Serial.println(F("[Drive] Enter"));
-      ctx.leftMotor.setPower(0.5);
-      ctx.rightMotor.setPower(0.5);
-      startTime_ = ctx.now();
-    }
-
-    void tick(RobotContext &ctx) override
-    {
-      // drive for 3 seconds
-      if (ctx.now() - startTime_ > 3000)
-      {
-        Serial.println(F("[Drive] Done driving"));
-        ctx.stateMachine->transitionTo(IdleState::instance());
-      }
-    }
-
-    void onExit(RobotContext &ctx) override
-    {
-      Serial.println(F("[Drive] Exit"));
-      ctx.leftMotor.stop();
-      ctx.rightMotor.stop();
-    }
+    DriveState();
+    static DriveState &instance();
+    void onEnter(RobotContext &ctx) override;
+    void tick(RobotContext &ctx) override;
+    void onExit(RobotContext &ctx) override;
 
   private:
     unsigned long startTime_ = 0;
   };
 
-  void setup()
+  // ------------------------------
+  // Definitions (in any order now)
+  // ------------------------------
+  IdleState::IdleState() : IState<RobotContext>("Idle") {}
+  IdleState &IdleState::instance()
   {
-    // put your setup code here, to run once:
-    Serial.begin(9600);
-
-    p::joystick::device.onPress(makeCallback(onButtonPressed));
-    p::joystick::device.begin();
-
-    p::motor::encoderLeft
-        .asInputPullup()
-        .withChangeInterrupt(
-            makeCallback(
-                []()
-                {
-                  leftCounter++;
-
-                  if (distanceDriven == false && leftCounter >= targetEncodings)
-                  {
-                    stopMotor();
-                    distanceDriven = true;
-                  }
-                }))
-        .build()
-        .begin();
-
-    p::motor::encoderRight.asInputPullup().withChangeInterrupt(makeCallback(
-                                                                   []()
-                                                                   {
-    if(countEncodings) rightCounter++; }))
-        .build()
-        .begin();
-
-    p::lcd::device.begin();
-
-    Wire.begin();
+    static IdleState s;
+    return s;
   }
 
+  void IdleState::onEnter(RobotContext &ctx)
+  {
+    Serial.println(F("[Idle] Entered"));
+    p::motor::leftMotor.stop();
+    p::motor::rightMotor.stop();
+    ctx.currentStep = 0;
+  }
+
+  void IdleState::tick(RobotContext &)
+  {
+    Serial.println(F("[Idle] Waiting for button press..."));
+  }
+
+  void IdleState::onEvent(RobotContext &ctx, const Event &ev)
+  {
+    if (ev.name() == ButtonPressedEvent::StaticName)
+    {
+      Serial.println(F("[Idle] Button pressed → DriveState"));
+      ctx.stateMachine->transitionTo(DriveState::instance());
+    }
+  }
+
+  // ------------------------------
+  DriveState::DriveState() : IState<RobotContext>("Drive") {}
+  DriveState &DriveState::instance()
+  {
+    static DriveState s;
+    return s;
+  }
+
+  void DriveState::onEnter(RobotContext &ctx)
+  {
+    Serial.println(F("[Drive] Entered"));
+    startTime_ = ctx.now();
+  }
+
+  void DriveState::tick(RobotContext &ctx)
+  {
+    Serial.println(F("[Drive] Driving..."));
+    if (ctx.now() - startTime_ > 3000)
+    {
+      Serial.println(F("[Drive] Done → IdleState"));
+      ctx.stateMachine->transitionTo(IdleState::instance());
+    }
+  }
+
+  void DriveState::onExit(RobotContext &ctx)
+  {
+    p::motor::leftMotor.stop();
+    p::motor::rightMotor.stop();
+    Serial.println(F("[Drive] Exit"));
+  }
+
+  // ------------------------------
+  // Global state
+  // ------------------------------
+  RobotContext ctx;
+  StateMachine<RobotContext> *machine = nullptr;
+
+  // ------------------------------
+  // Arduino setup
+  // ------------------------------
+  void setup()
+  {
+    Serial.begin(9600);
+
+    machine = new StateMachine<RobotContext>(ctx, IdleState::instance());
+
+    p::joystick::device.onPress(makeCallback([]()
+                                             {
+      if (machine)
+        machine->handleEvent(ButtonPressedEvent{}); }));
+
+    p::car::beginAll();
+  }
+
+  // ------------------------------
+  // Arduino loop
+  // ------------------------------
   void loop()
   {
-    float heading = offsetDegrees(readHeadingDegrees(), 180);
-
-    String direction = getHeadingDirection(heading);
-    p::lcd::device.printLine(2, "Heading " + direction + " :" + String(heading, 2));
-
-    executeProgramState();
+    if (machine)
+      machine->tick();
 
     delay(200);
   }
+
 }
