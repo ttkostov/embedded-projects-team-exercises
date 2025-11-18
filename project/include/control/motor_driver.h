@@ -58,19 +58,23 @@ public:
   void setTargetHeading(const Angle &heading);
   bool hasReachedTarget() const;
 
+  void reset();
+
 private:
   bool initialized_ = false;
 
   Motor &leftMotor_;
   Motor &rightMotor_;
-
   Compass &compass_;
 
   Angle targetHeading_;
-  bool targetSet_ = false;
   Angle tolerance_ = Angle(5.0);
 
+  bool targetSet_ = false;
+  bool reachedTarget_ = false;
+
   bool approachTarget();
+  void stopMotors();
 };
 
 // Drives both motors straight based on a single encoder measurement.
@@ -87,6 +91,8 @@ public:
   bool hasReachedTarget() const;
 
   void reset();
+
+  void onEncoderTick();
 
 private:
   Motor &leftMotor_;

@@ -72,9 +72,18 @@ namespace physical
 
   namespace car
   {
-    inline JoystickMotorDriver joystickDriver(motor::leftMotor, motor::rightMotor, joystick::device);
-    inline CompassHeadingMotorDriver compassDriver(motor::leftMotor, motor::rightMotor, compass::device);
-    inline DistanceMotorDriver distanceDriver(motor::leftMotor, motor::rightMotor, motor::leftEncoder);
+    inline CompassHeadingMotorDriver compassDriver{
+        motor::leftMotor,
+        motor::rightMotor,
+        compass::device};
+    inline JoystickMotorDriver joystickDriver{
+        motor::leftMotor,
+        motor::rightMotor,
+        joystick::device};
+    inline DistanceMotorDriver distanceDriver{
+        motor::leftMotor,
+        motor::rightMotor,
+        motor::leftEncoder};
 
     inline Car device(joystick::device, motor::leftMotor, motor::rightMotor, joystickDriver);
 

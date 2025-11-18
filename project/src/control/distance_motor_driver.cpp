@@ -13,12 +13,13 @@ void DistanceMotorDriver::begin()
     return;
   initialized_ = true;
 
-  leftMotor_.stop();
-  rightMotor_.stop();
+  stopMotors();
   encoder_.reset();
 
   targetSet_ = false;
   reachedTarget_ = false;
+
+  encoder_.addTickCallback(makeCallback(this, &DistanceMotorDriver::onEncoderTick));
 }
 
 void DistanceMotorDriver::setTarget(float distanceCm, float power)
@@ -30,6 +31,7 @@ void DistanceMotorDriver::setTarget(float distanceCm, float power)
   drivePower_ = constrain(power, -1.0f, 1.0f);
 
   startDistanceCm_ = encoder_.getDistanceCm();
+
   targetSet_ = true;
   reachedTarget_ = false;
 }
@@ -50,34 +52,40 @@ void DistanceMotorDriver::tick()
 {
   if (!initialized_ || !targetSet_ || reachedTarget_)
   {
-    Serial.println("Skipping tick: not initialized, target not set, or target already reached.");
-    return;
-  }
 
-  float distanceSinceStartCm = encoder_.getDistanceCm() - startDistanceCm_;
-
-  if (distanceSinceStartCm >= targetDistanceCm_)
-  {
-    stopMotors();
-    reachedTarget_ = true;
     return;
   }
 
   driveStraight();
+}
 
-  leftMotor_.tick();
-  rightMotor_.tick();
+void DistanceMotorDriver::onEncoderTick()
+{
+  if (!targetSet_ || reachedTarget_)
+    return;
+
+  float distanceSinceStartCm = encoder_.getDistanceCm() - startDistanceCm_;
+  if (distanceSinceStartCm >= targetDistanceCm_)
+  {
+    stopMotors();
+    reachedTarget_ = true;
+  }
 }
 
 void DistanceMotorDriver::driveStraight()
 {
-  Serial.println("Driving straight with power: " + String(drivePower_));
   leftMotor_.setPower(drivePower_);
   rightMotor_.setPower(drivePower_);
+
+  leftMotor_.tick();
+  rightMotor_.tick();
 }
 
 void DistanceMotorDriver::stopMotors()
 {
   leftMotor_.stop();
   rightMotor_.stop();
+
+  leftMotor_.tick();
+  rightMotor_.tick();
 }

@@ -5,30 +5,47 @@
 struct Angle
 {
 public:
-  explicit Angle(float deg = 0.0f)
-      : degrees_(wrapAngle(deg)) {}
+  explicit Angle(float deg = 0)
+      : degrees_(wrap(deg)), isAbsolute_(true) {}
+
+  static Angle absolute(float deg) { return Angle(deg, true); }
+  static Angle relative(float deg) { return Angle(deg, false); }
 
   float value() const { return degrees_; }
+  bool isAbsolute() const { return isAbsolute_; }
 
-  Angle operator-(const Angle &other) const { return Angle(degrees_ - other.degrees_); }
-  Angle operator+(const Angle &other) const { return Angle(degrees_ + other.degrees_); }
-  Angle operator-(float delta) const { return Angle(degrees_ - delta); }
-  Angle operator+(float delta) const { return Angle(degrees_ + delta); }
+  Angle differenceTo(const Angle &other) const
+  {
+    float a = wrap(degrees_);
+    float b = wrap(other.degrees_);
 
-  bool operator==(const Angle &other) const { return degrees_ == other.degrees_; }
-  bool operator!=(const Angle &other) const { return !(*this == other); }
+    float d = b - a;
 
-  Angle operator*(const float factor) const { return Angle(degrees_ * factor); }
+    if (d > 180)
+      d -= 360;
+    if (d < -180)
+      d += 360;
+
+    return Angle::relative(d);
+  }
+
+  Angle operator+(float deg) const { return Angle(degrees_ + deg, isAbsolute_); }
+  Angle operator-(float deg) const { return *this + (-deg); }
+
+  Angle operator+(const Angle &other) const { return Angle(degrees_ + other.degrees_, isAbsolute_ || other.isAbsolute_); }
+  Angle operator-(const Angle &other) const { return *this + Angle(-other.degrees_, other.isAbsolute_); }
 
 private:
   float degrees_;
+  bool isAbsolute_;
 
-  static float wrapAngle(float angle)
+  Angle(float deg, bool isAbs)
+      : degrees_(isAbs ? wrap(deg) : deg), isAbsolute_(isAbs) {}
+
+  static float wrap(float d)
   {
-    angle = fmodf(angle, 360.0f);
-    if (angle < 0)
-      angle += 360.0f;
-    return angle;
+    d = fmodf(d, 360.0f);
+    return (d < 0 ? d + 360.0f : d);
   }
 };
 

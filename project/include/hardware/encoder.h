@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "pin.h"
 #include "control/interrupt_dispatcher.h"
+#include "control/callback.h"
 
 struct EncoderReading
 {
@@ -12,6 +13,8 @@ struct EncoderReading
 class Encoder
 {
 public:
+  static constexpr uint8_t MAX_CALLBACKS = 4;
+
   Encoder(PinBuilder &pinBuilder, float encodingsPerCm);
 
   Encoder &begin();
@@ -21,6 +24,8 @@ public:
   unsigned long getTicks() const;
   float getDistanceCm() const;
 
+  bool addTickCallback(const Callback &cb);
+
 private:
   bool initialized_ = false;
   Pin &pin_;
@@ -28,7 +33,10 @@ private:
 
   volatile unsigned long tickCount_ = 0;
 
-  void onEdge(); // ISR callback
+  Callback callbacks_[MAX_CALLBACKS];
+  uint8_t callbackCount_ = 0;
+
+  void onEdge();
 };
 
 class EncoderBuilder

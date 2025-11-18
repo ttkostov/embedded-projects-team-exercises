@@ -1,45 +1,25 @@
 #include <Arduino.h>
-#include <algorithm>
 #include <LiquidCrystal.h>
-#include "exercises.h"
 #include "hardware.h"
 #include "physical.h"
-#include <Wire.h>
-#include "control/state_machine.h"
+#include "control/state/state_machine.h"
+#include "control/state/action_states.h"
+#include "util/directional.h"
 
 namespace ex_5_6_alt
 {
   namespace p = physical;
 
-  // ------------------------------
-  // Shared robot runtime context
-  // ------------------------------
   struct RobotContext
   {
     StateMachine<RobotContext> *stateMachine = nullptr;
-
-    Angle targetHeading = Angle(0);
-    float targetDistanceCm = 0;
-
-    unsigned int currentStep = 0;
-    Angle headingsByStep[4] = {Angle(110), Angle(110), Angle(0)};
-    float distancesCmByStep[4] = {20, 13, 20};
-    float powersByStep[4] = {0.75, 0.25, 0.5};
-
-    unsigned long now() const { return millis(); }
   };
 
-  // ------------------------------
-  // Event definitions
-  // ------------------------------
   struct ButtonPressedEvent : Event
   {
     DEFINE_EVENT_TYPE("ButtonPressed");
   };
 
-  // ------------------------------
-  // State definitions
-  // ------------------------------
   struct IdleState : IState<RobotContext>
   {
     IdleState() : IState<RobotContext>("Idle") {}
@@ -54,103 +34,69 @@ namespace ex_5_6_alt
     {
       p::motor::leftMotor.stop();
       p::motor::rightMotor.stop();
-      ctx.currentStep = 0;
+      Serial.println(F("[Idle] Ready."));
     }
 
     void tick(RobotContext &ctx) override
     {
-      p::motor::leftMotor.stop();
-      p::motor::rightMotor.stop();
       p::motor::leftMotor.tick();
       p::motor::rightMotor.tick();
-
-      Serial.println(F("[Idle] Waiting for events..."));
     }
 
-    void onEvent(RobotContext &ctx, const Event &ev) override;
+    void onEvent(RobotContext &ctx, const Event &ev) override
+    {
+      if (ev.name() == ButtonPressedEvent::StaticName)
+      {
+        Serial.println(F("[Idle] Button pressed → starting triangle"));
+        ctx.stateMachine->pushState(SequenceStateInstance());
+      }
+    }
+
+    static IState<RobotContext> &SequenceStateInstance();
   };
 
-  struct DriveState : IState<RobotContext>
+  IState<RobotContext> &IdleState::SequenceStateInstance()
   {
-    DriveState() : IState<RobotContext>("Drive") {}
+    static DriveDistanceState<RobotContext> leg1(20, 0.75f);
+    static TurnHeadingState<RobotContext> turn1(Angle(110));
 
-    static DriveState &instance()
-    {
-      static DriveState s;
-      return s;
-    }
+    static DriveDistanceState<RobotContext> leg2(13, 0.25f);
+    static TurnHeadingState<RobotContext> turn2(Angle(110));
 
-    void onEnter(RobotContext &ctx) override
-    {
-      p::car::distanceDriver.reset();
+    static DriveDistanceState<RobotContext> leg3(20, 0.50f);
+    static TurnHeadingState<RobotContext> turn3(Angle(0));
 
-      float distanceCm = ctx.distancesCmByStep[ctx.currentStep];
-      float drivePower = ctx.powersByStep[ctx.currentStep];
-      p::car::distanceDriver.setTarget(distanceCm, drivePower);
-    }
+    static SequenceState<RobotContext> seq{
+        &leg1, &turn1,
+        &leg2, &turn2,
+        &leg3, &turn3};
 
-    void onExit(RobotContext &ctx) override
-    {
-      p::motor::leftMotor.stop();
-      p::motor::rightMotor.stop();
-    }
-
-    void tick(RobotContext &ctx) override;
-  };
-
-  // ------------------------------
-  // Circularly dependant state methods
-  // ------------------------------
-  void IdleState::onEvent(RobotContext &ctx, const Event &ev)
-  {
-    if (ev.name() == ButtonPressedEvent::StaticName)
-    {
-      ctx.stateMachine->transitionTo(DriveState::instance());
-    }
+    return seq;
   }
 
-  void DriveState::tick(RobotContext &ctx)
-  {
-    Serial.println(F("[Drive] Driving to target..."));
-    p::car::distanceDriver.tick();
-    if (p::car::distanceDriver.hasReachedTarget())
-    {
-      ctx.stateMachine->transitionTo(IdleState::instance());
-    }
-  }
-
-  // ------------------------------
-  // Global state
-  // ------------------------------
   RobotContext ctx;
   StateMachine<RobotContext> *machine = nullptr;
 
-  // ------------------------------
-  // Arduino setup
-  // ------------------------------
   void setup()
   {
     Serial.begin(9600);
+
+    p::car::beginAll();
 
     machine = new StateMachine<RobotContext>(ctx, IdleState::instance());
 
     p::joystick::device.onPress(makeCallback([]()
                                              {
-      if (machine)
-        machine->handleEvent(ButtonPressedEvent{}); }));
-
-    p::car::beginAll();
+        if (machine)
+          machine->handleEvent(ButtonPressedEvent{}); }));
   }
 
-  // ------------------------------
-  // Arduino loop
-  // ------------------------------
   void loop()
   {
     if (machine)
       machine->tick();
 
-    delay(200);
+    delay(10);
   }
 
 }

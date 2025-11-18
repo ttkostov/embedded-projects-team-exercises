@@ -13,7 +13,6 @@ Encoder &Encoder::begin()
 {
   if (initialized_)
     return *this;
-
   initialized_ = true;
 
   pin_.begin();
@@ -24,43 +23,62 @@ Encoder &Encoder::begin()
 
 void Encoder::reset()
 {
-  // noInterrupts();
   tickCount_ = 0;
-  // interrupts();
 }
 
 EncoderReading Encoder::read() const
 {
   EncoderReading r;
-
-  // noInterrupts();
   r.ticks = tickCount_;
-  // interrupts();
-
   r.distanceCm = r.ticks / encodingsPerCm_;
-
   return r;
 }
 
 unsigned long Encoder::getTicks() const
 {
-  // noInterrupts();
   unsigned long t = tickCount_;
-  // interrupts();
-
   return t;
 }
 
 float Encoder::getDistanceCm() const
 {
-  // noInterrupts();
   unsigned long t = tickCount_;
-  // interrupts();
-
   return t / encodingsPerCm_;
 }
 
-void Encoder::onEdge()
+bool Encoder::addTickCallback(const Callback &cb)
+{
+  if (callbackCount_ >= MAX_CALLBACKS)
+    return false;
+
+  callbacks_[callbackCount_++] = cb;
+  return true;
+}
+
+void Encoder::onEdge() // ISR
 {
   tickCount_++;
+
+  // dispatch callbacks, must run quickly!
+  for (uint8_t i = 0; i < callbackCount_; i++)
+    callbacks_[i]();
+}
+
+// ----------------- EncoderBuilder ----------------
+
+EncoderBuilder::EncoderBuilder(PinBuilder &pinBuilder)
+    : pinBuilder_(pinBuilder)
+{
+}
+
+EncoderBuilder &EncoderBuilder::withEncodingsPerCm(float encodingsPerCm)
+{
+  encodingsPerCm_ = encodingsPerCm;
+  return *this;
+}
+
+Encoder &EncoderBuilder::build()
+{
+  static Encoder encoder(pinBuilder_, encodingsPerCm_);
+  return encoder;
 }
