@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "control/state/state_machine.h"
 #include "control/state/action_states.h"
+#include "control/command.h"
 #include "control/motor_driver.h"
 #include "hardware/motor.h"
 #include "hardware/encoder.h"
@@ -14,9 +15,11 @@ struct CommandState : IState<Context>
 {
   CommandState() : IState<Context>("Command") {}
 
+  CommandParser parser;
+
   void onEnter(Context &ctx) override
   {
-    Serial.println(F("[Command] Waiting for input..."));
+    Serial.println("[Command] Waiting for input...");
   }
 
   void tick(Context &ctx) override
@@ -24,82 +27,80 @@ struct CommandState : IState<Context>
     if (!Serial.available())
       return;
 
-    // Read a full line
-    String message = Serial.readStringUntil('\n');
-    message.trim();
+    String msg = Serial.readStringUntil('\n');
+    msg.trim();
 
-    Serial.println("[Command] Received: " + message);
+    if (msg.length() == 0)
+      return;
 
-    if (!handleMessage(ctx, message))
+    Serial.println("[Command] Received: " + msg);
+
+    auto parsed = parser.parse(msg);
+
+    if (parsed.command.length() == 0)
     {
-      Serial.println(F("[Command] Invalid command. Try lcd:txt, dist:cm, degree:deg"));
-    }
-  }
-
-  bool handleMessage(Context &ctx, String msg)
-  {
-    static const char *commands[] = {"lcd", "dist", "degree"};
-    static const int N = sizeof(commands) / sizeof(commands[0]);
-
-    int foundPos = -1;
-    String command;
-
-    // Find which command matches
-    for (int i = 0; i < N; i++)
-    {
-      String c = commands[i];
-      int pos = msg.indexOf(c);
-      if (pos >= 0)
-      {
-        command = c;
-        foundPos = pos;
-        break;
-      }
+      Serial.println("[Command] Invalid command.");
+      return;
     }
 
-    if (foundPos < 0)
-      return false;
-
-    // Extract content after the command and colon
-    int colon = msg.indexOf(':', foundPos + command.length());
-    if (colon < 0)
-      return false;
-
-    String content = msg.substring(colon + 1);
-    content.trim();
-
-    handleCommand(ctx, command, content);
-    return true;
+    handleCommand(ctx, parsed);
   }
 
-  void handleCommand(Context &ctx, const String &command, const String &content)
+  void handleCommand(Context &ctx, const CommandParseResult &cmd)
   {
+    String c = cmd.command;
+
     p::lcd::device.clear();
-    p::lcd::device.printLine(0, "Cmd: " + command);
-    p::lcd::device.printLine(1, "Params: " + content);
+    p::lcd::device.printLine(0, "Cmd: " + c);
+    p::lcd::device.printLine(1, "Val: " + cmd.rawValue);
 
-    if (command.equalsIgnoreCase("lcd"))
+    if (c.equalsIgnoreCase("lcd"))
     {
-      Serial.println("[Command] LCD -> " + content);
-
-      p::lcd::device.clear();
-      p::lcd::device.printLine(0, content);
+      handleLCD(cmd);
     }
-    else if (command.equalsIgnoreCase("dist"))
+    else if (c.equalsIgnoreCase("dist"))
     {
-      float dist = content.toFloat();
-      Serial.println("[Command] Drive " + String(dist) + " cm");
-
-      ctx.stateMachine->pushState(
-          *(new DriveDistanceState<Context>(dist, 0.5f)));
+      handleDist(ctx, cmd);
     }
-    else if (command.equalsIgnoreCase("degree"))
+    else if (c.equalsIgnoreCase("degree"))
     {
-      float deg = content.toFloat();
-      Serial.println("[Command] Turn to " + String(deg) + "°");
-
-      ctx.stateMachine->pushState(
-          *(new TurnHeadingState<Context>(Angle::absolute(deg))));
+      handleDegree(ctx, cmd);
     }
+    else
+    {
+      Serial.println("[Command] Unknown command: " + c);
+    }
+  }
+
+  void handleLCD(const CommandParseResult &cmd)
+  {
+    Serial.println("[LCD] " + cmd.rawValue);
+    p::lcd::device.clear();
+    p::lcd::device.printLine(0, cmd.rawValue);
+  }
+
+  void handleDist(Context &ctx, const CommandParseResult &cmd)
+  {
+    float dist = cmd.numericValue;
+    float speed = cmd.getParamFloat("speed", 0.5f);
+
+    auto *state = new DriveDistanceState<Context>(dist, speed);
+    ctx.stateMachine->pushState(*state);
+  }
+
+  void handleDegree(Context &ctx, const CommandParseResult &cmd)
+  {
+    float deg = cmd.numericValue;
+    bool relative = cmd.hasFlag("--relative");
+
+    Angle target = relative ? Angle::relative(deg)
+                            : Angle::absolute(deg);
+
+    Serial.print("[Degree] Turning ");
+    Serial.print(relative ? "(relative) " : "(absolute) ");
+    Serial.println(String(deg) + "°");
+
+    auto *state = new TurnHeadingState<Context>(target);
+    ctx.stateMachine->pushState(*state);
   }
 };
