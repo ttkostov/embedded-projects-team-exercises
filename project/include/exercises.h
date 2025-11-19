@@ -73,6 +73,12 @@ namespace ex_5_6_alt
   void loop();
 }
 
+namespace ex_6_4
+{
+  void setup();
+  void loop();
+}
+
 namespace sandbox
 {
   void setup();

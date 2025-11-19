@@ -4,9 +4,10 @@
 #include "physical.h"
 #include "control/state/state_machine.h"
 #include "control/state/action_states.h"
+#include "control/state/command_state.h"
 #include "util/directional.h"
 
-namespace ex_5_6_alt
+namespace ex_6_4
 {
   namespace p = physical;
 
@@ -48,27 +49,18 @@ namespace ex_5_6_alt
       if (ev.name() == ButtonPressedEvent::StaticName)
       {
         Serial.println(F("[Idle] Button pressed -> starting triangle"));
-        ctx.stateMachine->pushState(SequenceStateInstance());
+        ctx.stateMachine->pushState(TriggeredState());
       }
     }
 
-    static IState<RobotContext> &SequenceStateInstance();
+    static IState<RobotContext> &TriggeredState();
   };
 
-  IState<RobotContext> &IdleState::SequenceStateInstance()
+  IState<RobotContext> &IdleState::TriggeredState()
   {
-    static DriveDistanceState<RobotContext> leg1(20, 0.75f);
-    static TurnHeadingState<RobotContext> turn1(Angle::relative(110));
+    static CommandState<RobotContext> initialState;
 
-    static DriveDistanceState<RobotContext> leg2(13, 0.25f);
-    static TurnHeadingState<RobotContext> turn2(Angle::relative(110));
-
-    static DriveDistanceState<RobotContext> leg3(20, 0.50f);
-    static TurnHeadingState<RobotContext> turn3(Angle::relative(0));
-
-    static SequenceState<RobotContext> seq{"TriangleSequence", {&leg1, &turn1, &leg2, &turn2, &leg3, &turn3}};
-
-    return seq;
+    return initialState;
   }
 
   RobotContext ctx;
@@ -82,7 +74,6 @@ namespace ex_5_6_alt
 
     p::joystick::device.onPress(makeCallback([]()
                                              {
-                                              Serial.println("Button pressed");
         if (machine)
           machine->handleEvent(ButtonPressedEvent{}); }));
 

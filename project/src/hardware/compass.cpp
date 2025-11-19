@@ -11,6 +11,8 @@ Compass &Compass::begin()
     return *this;
   }
 
+  I2CBus::instance().begin();
+
   return *this;
 }
 

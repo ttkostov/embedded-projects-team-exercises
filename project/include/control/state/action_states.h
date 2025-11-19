@@ -48,10 +48,9 @@ struct SequenceState : ActionState<Context>
   uint8_t stepCount = 0;
   uint8_t current = 0;
 
-  SequenceState(std::initializer_list<IState<Context> *> list)
-      : ActionState<Context>("Sequence")
+  SequenceState(const char *name, std::initializer_list<IState<Context> *> list)
+      : ActionState<Context>(name)
   {
-    stepCount = 0;
     for (auto *s : list)
     {
       if (stepCount < MaxSteps)
@@ -61,6 +60,7 @@ struct SequenceState : ActionState<Context>
 
   void onEnter(Context &ctx) override
   {
+    // First time entering the sequence
     ActionState<Context>::onEnter(ctx);
 
     if (stepCount == 0)
@@ -73,28 +73,25 @@ struct SequenceState : ActionState<Context>
     ctx.stateMachine->pushState(*steps[current]);
   }
 
-  void tick(Context &ctx) override
+  void onResume(Context &ctx) override
   {
-    if (current >= stepCount)
-      return;
-
-    IState<Context> *activeStep = steps[current];
-
-    // do nothing if the active state is still current
-    if (ctx.stateMachine->current() == activeStep)
-      return;
-
-    // advance to the next step
+    // A child step just completed (was popped)
     current++;
 
     if (current >= stepCount)
     {
       this->finish(ctx);
+      return;
     }
-    else
-    {
-      ctx.stateMachine->pushState(*steps[current]);
-    }
+
+    // push the next step
+    ctx.stateMachine->pushState(*steps[current]);
+  }
+
+  void tick(Context &ctx) override
+  {
+    // SequenceState itself does nothing during tick.
+    // Child step is active and receives ticks.
   }
 
   void onEvent(Context &ctx, const Event &ev) override
@@ -126,7 +123,7 @@ struct DriveDistanceState : ActionState<Context>
     ActionState<Context>::onEnter(ctx);
 
     p::car::distanceDriver.reset();
-    p::car::distanceDriver.setTarget(distanceCm, power);
+    p::car::distanceDriver.setTarget(abs(distanceCm), distanceCm > 0 ? power : -power);
   }
 
   void tick(Context &ctx) override
@@ -161,8 +158,14 @@ struct TurnHeadingState : ActionState<Context>
   {
     ActionState<Context>::onEnter(ctx);
 
+    CompassReading currentReading = p::compass::device.read();
+    Angle current = currentReading.heading;
+    Angle finalTarget = target.isAbsolute()
+                            ? target
+                            : (current + target);
+
     p::car::compassDriver.reset();
-    p::car::compassDriver.setTargetHeading(target);
+    p::car::compassDriver.setTargetHeading(finalTarget);
   }
 
   void tick(Context &ctx) override

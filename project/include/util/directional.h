@@ -35,6 +35,8 @@ public:
   Angle operator+(const Angle &other) const { return Angle(degrees_ + other.degrees_, isAbsolute_ || other.isAbsolute_); }
   Angle operator-(const Angle &other) const { return *this + Angle(-other.degrees_, other.isAbsolute_); }
 
+  Angle operator*(const float factor) const { return Angle(degrees_ * factor, isAbsolute_); }
+
 private:
   float degrees_;
   bool isAbsolute_;

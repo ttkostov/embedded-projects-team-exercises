@@ -26,7 +26,7 @@ private:
   Pin &directionPin_;
   bool motorStateChanged_ = true;
 
-  const unsigned int maxPower_ = 1023;
+  const unsigned int maxPower_ = 255;
 
   float currentPowerUnits_ = 0; // 0 to 1.0
   Direction currentDirection_ = FORWARD;

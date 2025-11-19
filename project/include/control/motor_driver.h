@@ -1,3 +1,4 @@
+#pragma once
 #include <Arduino.h>
 #include "hardware/motor.h"
 #include "hardware/joystick.h"
@@ -68,7 +69,7 @@ private:
   Compass &compass_;
 
   Angle targetHeading_;
-  Angle tolerance_ = Angle(5.0);
+  Angle tolerance_ = Angle(3.0);
 
   bool targetSet_ = false;
   bool reachedTarget_ = false;

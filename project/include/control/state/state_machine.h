@@ -19,6 +19,7 @@ struct IState
   virtual ~IState() {}
 
   virtual void onEnter(Context &ctx) {};
+  virtual void onResume(Context &ctx) {}
   virtual void onExit(Context &ctx) {};
   virtual void onEvent(Context &ctx, const Event &ev) {};
   virtual void tick(Context &ctx) {};
@@ -76,8 +77,8 @@ public:
 
     if (stackSize_ > 0)
     {
-      Serial.println("[" + String(stack_[stackSize_ - 1]->name) + "]: Resume (Enter)");
-      stack_[stackSize_ - 1]->onEnter(ctx_);
+      Serial.println("[" + String(stack_[stackSize_ - 1]->name) + "]: Resume");
+      stack_[stackSize_ - 1]->onResume(ctx_);
     }
   }
 

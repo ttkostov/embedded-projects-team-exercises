@@ -61,8 +61,13 @@ void CompassHeadingMotorDriver::tick()
     reachedTarget_ = true;
     targetSet_ = false;
 
+    Serial.println("Reached target heading.");
+
     stopMotors();
   }
+
+  leftMotor_.tick();
+  rightMotor_.tick();
 }
 
 bool CompassHeadingMotorDriver::approachTarget()

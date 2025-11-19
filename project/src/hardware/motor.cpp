@@ -29,11 +29,11 @@ Motor &Motor::tick()
   switch (currentDirection_)
   {
   case Direction::FORWARD:
-    directionPin_.setHigh();
+    directionPin_.setLow();
     break;
 
   case Direction::BACKWARD:
-    directionPin_.setLow();
+    directionPin_.setHigh();
     break;
   }
 
