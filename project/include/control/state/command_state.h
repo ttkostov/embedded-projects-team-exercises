@@ -10,6 +10,14 @@
 #include "util/directional.h"
 #include "physical.h"
 
+struct CommandReceivedEvent : Event
+{
+  DEFINE_EVENT_TYPE("CommandReceived");
+  String text;
+
+  CommandReceivedEvent(const String &t) : text(t) {}
+};
+
 template <typename Context>
 struct CommandState : IState<Context>
 {
@@ -22,14 +30,15 @@ struct CommandState : IState<Context>
     Serial.println("[Command] Waiting for input...");
   }
 
-  void tick(Context &ctx) override
+  void onEvent(Context &ctx, const Event &ev) override
   {
-    if (!Serial.available())
+    if (ev.name() != CommandReceivedEvent::StaticName)
       return;
 
-    String msg = Serial.readStringUntil('\n');
-    msg.trim();
+    auto &cmdEv = static_cast<const CommandReceivedEvent &>(ev);
 
+    String msg = cmdEv.text;
+    msg.trim();
     if (msg.length() == 0)
       return;
 
@@ -50,7 +59,6 @@ struct CommandState : IState<Context>
   {
     String c = cmd.command;
 
-    p::lcd::device.clear();
     p::lcd::device.printLine(0, "Cmd: " + c);
     p::lcd::device.printLine(1, "Val: " + cmd.rawValue);
 
@@ -58,13 +66,17 @@ struct CommandState : IState<Context>
     {
       handleLCD(cmd);
     }
-    else if (c.equalsIgnoreCase("dist"))
+    else if (c.equalsIgnoreCase("move"))
     {
-      handleDist(ctx, cmd);
+      handleMove(ctx, cmd);
     }
-    else if (c.equalsIgnoreCase("degree"))
+    else if (c.equalsIgnoreCase("turn"))
     {
-      handleDegree(ctx, cmd);
+      handleTurn(ctx, cmd);
+    }
+    else if (c.equalsIgnoreCase("find"))
+    {
+      handleFind(ctx, cmd);
     }
     else
     {
@@ -79,7 +91,7 @@ struct CommandState : IState<Context>
     p::lcd::device.printLine(0, cmd.rawValue);
   }
 
-  void handleDist(Context &ctx, const CommandParseResult &cmd)
+  void handleMove(Context &ctx, const CommandParseResult &cmd)
   {
     float dist = cmd.numericValue;
     float speed = cmd.getParamFloat("speed", 0.5f);
@@ -88,7 +100,7 @@ struct CommandState : IState<Context>
     ctx.stateMachine->pushState(*state);
   }
 
-  void handleDegree(Context &ctx, const CommandParseResult &cmd)
+  void handleTurn(Context &ctx, const CommandParseResult &cmd)
   {
     float deg = cmd.numericValue;
     bool relative = cmd.hasFlag("--relative");
@@ -99,6 +111,16 @@ struct CommandState : IState<Context>
     Serial.print("[Degree] Turning ");
     Serial.print(relative ? "(relative) " : "(absolute) ");
     Serial.println(String(deg) + "°");
+
+    auto *state = new TurnHeadingState<Context>(target);
+    ctx.stateMachine->pushState(*state);
+  }
+
+  void handleFind(Context &ctx, const CommandParseResult &cmd)
+  {
+    Angle target = Angle::absolute(0);
+
+    Serial.print("[Find] Finding north (0°) ");
 
     auto *state = new TurnHeadingState<Context>(target);
     ctx.stateMachine->pushState(*state);
