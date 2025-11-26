@@ -29,7 +29,7 @@ namespace physical
   {
     inline PinBuilder x(A8);
     inline PinBuilder y(A7);
-    inline PinBuilder btn(18);
+    inline PinBuilder btn(19);
 
     inline Joystick &device = JoystickBuilder(x, y, btn)
                                   .withRotation(Joystick::Rotation::None)

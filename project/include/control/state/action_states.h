@@ -93,12 +93,6 @@ struct SequenceState : ActionState<Context>
     // SequenceState itself does nothing during tick.
     // Child step is active and receives ticks.
   }
-
-  void onEvent(Context &ctx, const Event &ev) override
-  {
-    if (current < stepCount)
-      steps[current]->onEvent(ctx, ev);
-  }
 };
 
 // Drive a fixed distance in centimeters

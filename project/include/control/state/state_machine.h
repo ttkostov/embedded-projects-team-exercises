@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "communication/serial_proxy.h"
 
 struct Event
 {
@@ -21,7 +22,7 @@ struct IState
   virtual void onEnter(Context &ctx) {};
   virtual void onResume(Context &ctx) {}
   virtual void onExit(Context &ctx) {};
-  virtual void onEvent(Context &ctx, const Event &ev) {};
+  virtual bool onEvent(Context &, const Event &) { return false; }
   virtual void tick(Context &ctx) {};
 };
 
@@ -46,20 +47,20 @@ public:
   {
     if (stackSize_ >= MaxStates)
     {
-      Serial.println(F("[StateMachine] ERROR: Stack overflow!"));
+      SerialProxy::instance().println(F("[StateMachine] ERROR: Stack overflow!"));
       return;
     }
 
     if (stackSize_ > 0)
     {
-      Serial.println("[" + String(stack_[stackSize_ - 1]->name) +
-                     "]: Pushing -> " + next.name);
+      SerialProxy::instance().println("[" + String(stack_[stackSize_ - 1]->name) +
+                                      "]: Pushing -> " + next.name);
       stack_[stackSize_ - 1]->onExit(ctx_);
     }
 
     stack_[stackSize_++] = &next;
 
-    Serial.println("[" + String(next.name) + "]: Enter");
+    SerialProxy::instance().println("[" + String(next.name) + "]: Enter");
     next.onEnter(ctx_);
   }
 
@@ -70,16 +71,40 @@ public:
 
     IState<Context> *curr = stack_[stackSize_ - 1];
 
-    Serial.println("[" + String(curr->name) + "]: Pop (Exit)");
+    SerialProxy::instance().println("[" + String(curr->name) + "]: Pop (Exit)");
     curr->onExit(ctx_);
 
     stackSize_--;
 
     if (stackSize_ > 0)
     {
-      Serial.println("[" + String(stack_[stackSize_ - 1]->name) + "]: Resume");
+      SerialProxy::instance().println("[" + String(stack_[stackSize_ - 1]->name) + "]: Resume");
       stack_[stackSize_ - 1]->onResume(ctx_);
     }
+  }
+
+  void replaceState(IState<Context> &next)
+  {
+    if (stackSize_ == 0)
+    {
+      pushState(next);
+      return;
+    }
+
+    IState<Context> *curr = stack_[stackSize_ - 1];
+
+    SerialProxy::instance().println("[" + String(curr->name) +
+                                    "]: Replace -> " + next.name);
+
+    // Exit old state
+    curr->onExit(ctx_);
+
+    // Replace without changing stack size
+    stack_[stackSize_ - 1] = &next;
+
+    // Enter new state
+    SerialProxy::instance().println("[" + String(next.name) + "]: Enter");
+    next.onEnter(ctx_);
   }
 
   void handleEvent(const Event &ev)
@@ -87,10 +112,17 @@ public:
     if (stackSize_ == 0)
       return;
 
-    IState<Context> *curr = stack_[stackSize_ - 1];
+    // Traverse top to bottom
+    for (int8_t i = stackSize_ - 1; i >= 0; --i)
+    {
+      IState<Context> *state = stack_[i];
 
-    Serial.println("[" + String(curr->name) + "]: Sending event '" + ev.name() + "'");
-    curr->onEvent(ctx_, ev);
+      SerialProxy::instance().println("[" + String(state->name) +
+                                      "]: Event '" + ev.name() + "'");
+
+      if (state->onEvent(ctx_, ev))
+        break; // event handled -> stop bubbling
+    }
   }
 
   IState<Context> *current() const

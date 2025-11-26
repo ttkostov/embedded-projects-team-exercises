@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "control/state/state_machine.h"
 #include "control/state/action_states.h"
+#include "communication/serial_proxy.h"
 #include "control/command.h"
 #include "control/motor_driver.h"
 #include "hardware/motor.h"
@@ -27,40 +28,38 @@ struct CommandState : IState<Context>
 
   void onEnter(Context &ctx) override
   {
-    Serial.println("[Command] Waiting for input...");
+    SerialProxy::instance().println("[Command] Waiting for input...");
   }
 
-  void onEvent(Context &ctx, const Event &ev) override
+  bool onEvent(Context &ctx, const Event &ev) override
   {
     if (ev.name() != CommandReceivedEvent::StaticName)
-      return;
+      return false;
 
     auto &cmdEv = static_cast<const CommandReceivedEvent &>(ev);
 
     String msg = cmdEv.text;
     msg.trim();
     if (msg.length() == 0)
-      return;
+      return true;
 
-    Serial.println("[Command] Received: " + msg);
+    SerialProxy::instance().println("[Command] Received: " + msg);
 
     auto parsed = parser.parse(msg);
 
     if (parsed.command.length() == 0)
     {
-      Serial.println("[Command] Invalid command.");
-      return;
+      SerialProxy::instance().println("[Command] Invalid command.");
+      return true;
     }
 
     handleCommand(ctx, parsed);
+    return true;
   }
 
   void handleCommand(Context &ctx, const CommandParseResult &cmd)
   {
     String c = cmd.command;
-
-    p::lcd::device.printLine(0, "Cmd: " + c);
-    p::lcd::device.printLine(1, "Val: " + cmd.rawValue);
 
     if (c.equalsIgnoreCase("lcd"))
     {
@@ -80,13 +79,13 @@ struct CommandState : IState<Context>
     }
     else
     {
-      Serial.println("[Command] Unknown command: " + c);
+      SerialProxy::instance().println("[Command] Unknown command: " + c);
     }
   }
 
   void handleLCD(const CommandParseResult &cmd)
   {
-    Serial.println("[LCD] " + cmd.rawValue);
+    SerialProxy::instance().println("[LCD] " + cmd.rawValue);
     p::lcd::device.clear();
     p::lcd::device.printLine(0, cmd.rawValue);
   }
@@ -108,9 +107,9 @@ struct CommandState : IState<Context>
     Angle target = relative ? Angle::relative(deg)
                             : Angle::absolute(deg);
 
-    Serial.print("[Degree] Turning ");
-    Serial.print(relative ? "(relative) " : "(absolute) ");
-    Serial.println(String(deg) + "°");
+    SerialProxy::instance().print("[Degree] Turning ");
+    SerialProxy::instance().print(relative ? "(relative) " : "(absolute) ");
+    SerialProxy::instance().println(String(deg) + "°");
 
     auto *state = new TurnHeadingState<Context>(target);
     ctx.stateMachine->pushState(*state);
@@ -120,7 +119,7 @@ struct CommandState : IState<Context>
   {
     Angle target = Angle::absolute(0);
 
-    Serial.print("[Find] Finding north (0°) ");
+    SerialProxy::instance().print("[Find] Finding north (0°) ");
 
     auto *state = new TurnHeadingState<Context>(target);
     ctx.stateMachine->pushState(*state);

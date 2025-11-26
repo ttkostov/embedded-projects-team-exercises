@@ -85,6 +85,12 @@ namespace ex_7_3
   void loop();
 }
 
+namespace final
+{
+  void setup();
+  void loop();
+}
+
 namespace sandbox
 {
   void setup();

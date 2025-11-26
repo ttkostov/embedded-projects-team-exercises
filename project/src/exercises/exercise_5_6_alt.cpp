@@ -43,13 +43,15 @@ namespace ex_5_6_alt
       p::motor::rightMotor.tick();
     }
 
-    void onEvent(RobotContext &ctx, const Event &ev) override
+    bool onEvent(RobotContext &ctx, const Event &ev) override
     {
       if (ev.name() == ButtonPressedEvent::StaticName)
       {
         Serial.println(F("[Idle] Button pressed -> starting triangle"));
         ctx.stateMachine->pushState(SequenceStateInstance());
+        return true;
       }
+      return false;
     }
 
     static IState<RobotContext> &SequenceStateInstance();

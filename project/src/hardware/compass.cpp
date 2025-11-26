@@ -40,5 +40,5 @@ Angle Compass::readHeading()
 
   float headingDeg = heading / 10.0; // Convert to degrees (range is 0-3599 -> 0.0-359.9 degrees)
 
-  return Angle(headingDeg);
+  return Angle(headingDeg) + headingOffset_;
 }

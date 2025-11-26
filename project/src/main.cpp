@@ -16,7 +16,8 @@ namespace entrypoint =
     // ex_5_6
     // ex_5_6_alt
     // ex_6_4
-    ex_7_3
+    // ex_7_3
+    final
     // sandbox
     // Activate the exercise you want to run by uncommenting it
     ;

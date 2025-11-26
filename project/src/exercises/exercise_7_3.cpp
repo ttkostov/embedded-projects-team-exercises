@@ -44,13 +44,16 @@ namespace ex_7_3
       p::motor::rightMotor.tick();
     }
 
-    void onEvent(RobotContext &ctx, const Event &ev) override
+    bool onEvent(RobotContext &ctx, const Event &ev) override
     {
       if (ev.name() == ButtonPressedEvent::StaticName)
       {
         Serial.println(F("[Idle] Button pressed -> transitioning to command state"));
         ctx.stateMachine->pushState(TriggeredState());
+        return true;
       }
+
+      return false;
     }
 
     static IState<RobotContext> &TriggeredState();
