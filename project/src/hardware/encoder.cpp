@@ -79,6 +79,5 @@ EncoderBuilder &EncoderBuilder::withEncodingsPerCm(float encodingsPerCm)
 
 Encoder &EncoderBuilder::build()
 {
-  static Encoder encoder(pinBuilder_, encodingsPerCm_);
-  return encoder;
+  return *(new Encoder(pinBuilder_, encodingsPerCm_));
 }

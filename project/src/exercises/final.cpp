@@ -89,8 +89,6 @@ namespace final
       line.trim();
       if (line.length() > 0)
         this->onEvent(ctx, CommandReceivedEvent(line));
-
-      showLcdInfo();
     };
 
     bool onEvent(RobotContext &ctx, const Event &ev) override
@@ -103,21 +101,6 @@ namespace final
       }
 
       return CommandState<RobotContext>::onEvent(ctx, ev);
-    }
-
-    void showLcdInfo()
-    {
-      CompassReading headingReading = p::compass::device.read();
-      p::lcd::device.printLine(0, "Heading: " + String(headingReading.headingDirection.toString()) + " (" + String(headingReading.heading.value(), 1) + ")");
-
-      int leftEncodings = p::motor::leftEncoder.getTicks();
-      float leftDistance = p::motor::leftEncoder.getDistanceCm();
-
-      int rightEncodings = p::motor::rightEncoder.getTicks();
-      float rightDistance = p::motor::rightEncoder.getDistanceCm();
-
-      p::lcd::device.printLine(1, "L: " + String(leftEncodings) + " (" + String(leftDistance, 1) + "cm)");
-      p::lcd::device.printLine(2, "R: " + String(rightEncodings) + " (" + String(rightDistance, 1) + "cm)");
     }
   };
 
@@ -140,6 +123,21 @@ namespace final
       last = now;
       SerialProxy::instance().println("[Heartbeat] OK");
     }
+  }
+
+  void showLcdInfo()
+  {
+    CompassReading headingReading = p::compass::device.read();
+    p::lcd::device.printLine(0, "Heading: " + String(headingReading.headingDirection.toString()) + " (" + String(headingReading.heading.value(), 1) + ")");
+
+    int leftEncodings = p::motor::leftEncoder.getTicks();
+    float leftDistance = p::motor::leftEncoder.getDistanceCm();
+
+    int rightEncodings = p::motor::rightEncoder.getTicks();
+    float rightDistance = p::motor::rightEncoder.getDistanceCm();
+
+    p::lcd::device.printLine(1, "L: " + String(leftEncodings) + " (" + String(leftDistance, 1) + "cm)");
+    p::lcd::device.printLine(2, "R: " + String(rightEncodings) + " (" + String(rightDistance, 1) + "cm)");
   }
 
   void setup()
@@ -170,6 +168,7 @@ namespace final
       }
 
       sendHeartbeat();
+      showLcdInfo();
       machine->tick();
     }
 
