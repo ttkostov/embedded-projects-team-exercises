@@ -116,7 +116,6 @@ struct DriveDistanceState : ActionState<Context>
   {
     ActionState<Context>::onEnter(ctx);
 
-    p::car::distanceDriver.reset();
     p::car::distanceDriver.setTarget(abs(distanceCm), distanceCm > 0 ? power : -power);
   }
 
@@ -125,11 +124,6 @@ struct DriveDistanceState : ActionState<Context>
     p::car::distanceDriver.tick();
     if (p::car::distanceDriver.hasReachedTarget())
       this->finish(ctx);
-  }
-
-  void onExit(Context &ctx) override
-  {
-    p::car::distanceDriver.reset();
   }
 };
 

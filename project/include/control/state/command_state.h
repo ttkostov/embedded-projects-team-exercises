@@ -93,7 +93,8 @@ struct CommandState : IState<Context>
   void handleMove(Context &ctx, const CommandParseResult &cmd)
   {
     float dist = cmd.numericValue;
-    float speed = cmd.getParamFloat("speed", 0.5f);
+    float speedPercent = cmd.getParamFloat("speed", 50.0f);
+    float speed = constrain(speedPercent / 100, 0.2f, 1.0f);
 
     auto *state = new DriveDistanceState<Context>(dist, speed);
     ctx.stateMachine->pushState(*state);

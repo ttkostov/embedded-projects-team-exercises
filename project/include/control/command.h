@@ -66,7 +66,7 @@ public:
 private:
   void tokenize(CommandParseResult &out, const String &input)
   {
-    int start = 0;
+    unsigned int start = 0;
 
     while (start < input.length())
     {
