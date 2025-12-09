@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Directory to search in
-SEARCH_DIR="./src"
+# Directories to search in (add more if needed)
+SEARCH_DIRS=(
+  "./src"
+  "./include"
+)
 
 # Output file
 OUT="merged_submission.cpp"
@@ -9,43 +12,50 @@ OUT="merged_submission.cpp"
 # Marker file that marks directories to be skipped
 MARKER_FILE=".skip-merge"
 
-# Start fresh
+# Remove old output
 rm -f "$OUT"
 
-# --- Collect directories to ignore (those containing MARKER_FILE) ---
-mapfile -t IGNORE_DIRS < <(find "$SEARCH_DIR" -type f -name "$MARKER_FILE" -printf '%h\n')
+# --- Collect ignore directories from all search roots ---
+IGNORE_DIRS=()
+for ROOT in "${SEARCH_DIRS[@]}"; do
+  while IFS= read -r dir; do
+    IGNORE_DIRS+=("$dir")
+  done < <(find "$ROOT" -type f -name "$MARKER_FILE" -printf '%h\n')
+done
 
+# --- Function: should this file be skipped? ---
 should_skip() {
   local file="$1"
   for dir in "${IGNORE_DIRS[@]}"; do
     case "$file" in
-      "$dir"/*) return 0 ;;  # yes, skip
+      "$dir"/*) return 0 ;;  # skip file
     esac
   done
-  return 1  # no, don't skip
+  return 1
 }
 
-# --- Header of merged file ---
+# --- Begin output file ---
 {
   echo "// === Combined C++ Submission ==="
   echo "// Generated on $(date)"
-  echo "// Source root: $SEARCH_DIR"
+  echo "// Source roots: ${SEARCH_DIRS[*]}"
   echo
   echo "// === Header Files ==="
 } >> "$OUT"
 
 
-# --- Merge header files (.h, .hpp) ---
-find "$SEARCH_DIR" -type f \( -name "*.h" -o -name "*.hpp" \) | sort | while IFS= read -r file; do
-  if should_skip "$file"; then
-    continue
-  fi
-  {
-    echo
-    echo
-    echo "// ===== File: $file ====="
-    cat "$file"
-  } >> "$OUT"
+# --- Merge header files (.h, .hpp) from all roots ---
+for ROOT in "${SEARCH_DIRS[@]}"; do
+  find "$ROOT" -type f \( -name "*.h" -o -name "*.hpp" \) | sort | while IFS= read -r file; do
+    if should_skip "$file"; then
+      continue
+    fi
+    {
+      echo
+      echo "// ===== File: $file ====="
+      cat "$file"
+    } >> "$OUT"
+  done
 done
 
 
@@ -56,24 +66,24 @@ done
   echo "// === Source Files ==="
 } >> "$OUT"
 
-find "$SEARCH_DIR" -type f -name "*.cpp" | sort | while IFS= read -r file; do
-  if should_skip "$file"; then
-    continue
-  fi
-  {
-    echo
-    echo
-    echo "// ===== File: $file ====="
-    cat "$file"
-  } >> "$OUT"
+for ROOT in "${SEARCH_DIRS[@]}"; do
+  find "$ROOT" -type f -name "*.cpp" | sort | while IFS= read -r file; do
+    if should_skip "$file"; then
+      continue
+    fi
+    {
+      echo
+      echo "// ===== File: $file ====="
+      cat "$file"
+    } >> "$OUT"
+  done
 done
 
 
 # --- End marker ---
 {
   echo
-  echo
   echo "// === End of Combined File ==="
 } >> "$OUT"
 
-echo "Done! Output written to $OUT"
+echo "Done! Output generated in $OUT"
